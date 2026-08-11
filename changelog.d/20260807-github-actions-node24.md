@@ -1,0 +1,1 @@
+- CI now pins the reviewed Node 24 releases of the official GitHub Actions used for checkout, tool setup, and artifact transfer.

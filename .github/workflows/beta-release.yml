@@ -1,0 +1,505 @@
+name: Publish Beta
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Beta SemVer without the v prefix, for example 0.3.0-beta.1
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vivago-beta-release-${{ github.repository }}
+  cancel-in-progress: false
+
+env:
+  BETA_VERSION: ${{ inputs.version }}
+  CODEX_VALIDATOR_SHA256: ebda00d55d7518b127f675f062fb5c6e7a1ffdc0a99df1a55ac594400d7d3228
+
+jobs:
+  build:
+    name: Rebuild and validate production Beta
+    if: github.repository == 'HiDream-ai/vivago-agent-cli' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GOCACHE: ${{ github.workspace }}/.ci-beta-go-cache
+      DIST_ROOT: ${{ github.workspace }}/.ci-beta-dist
+      CODEX_VALIDATOR: ${{ github.workspace }}/.ci-beta-validate-plugin.py
+    steps:
+      - name: Check out exact release source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: 1.25.12
+          cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Set up Node.js for Claude Code validation
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+
+      - name: Enforce company Beta release policy
+        run: |
+          python scripts/validate_beta_release_policy.py \
+            --version "${BETA_VERSION}" \
+            --repository "${{ github.repository }}" \
+            --ref "${{ github.ref }}" \
+            --source-revision "${GITHUB_SHA}"
+
+      - name: Install validation dependencies
+        run: python -m pip install --requirement requirements-dev.txt
+
+      - name: Fetch pinned official Codex plugin validator
+        run: |
+          set -euo pipefail
+          curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error \
+            --output "${CODEX_VALIDATOR}" \
+            https://raw.githubusercontent.com/openai/codex/e75a1888d7e91ce56fc90d0edd32a9e6a8974686/codex-rs/skills/src/assets/samples/plugin-creator/scripts/validate_plugin.py
+          printf '%s  %s\n' "${CODEX_VALIDATOR_SHA256}" "${CODEX_VALIDATOR}" \
+            | sha256sum --check
+
+      - name: Run default Go tests
+        run: go test ./...
+
+      - name: Run prod-profile Go tests
+        run: go test -tags prod ./...
+
+      - name: Run Go race tests
+        run: go test -race ./...
+
+      - name: Run Go vet
+        run: go vet ./...
+
+      - name: Run distribution and workflow tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Build six production Beta binaries
+        run: |
+          set -euo pipefail
+          python scripts/build_beta_binaries.py \
+            --output "${DIST_ROOT}/binaries" \
+            --version "${BETA_VERSION}" \
+            --source-revision "${GITHUB_SHA}"
+
+      - name: Assemble production Marketplace
+        run: |
+          set -euo pipefail
+          python scripts/assemble_beta_distribution.py \
+            --plugin-template plugin \
+            --binary-root "${DIST_ROOT}/binaries" \
+            --output "${DIST_ROOT}/marketplace" \
+            --version "${BETA_VERSION}" \
+            --source-revision "${GITHUB_SHA}"
+
+      - name: Verify production provenance and environment boundary
+        run: |
+          set -euo pipefail
+          python scripts/verify_beta_distribution.py \
+            --marketplace "${DIST_ROOT}/marketplace" \
+            --version "${BETA_VERSION}" \
+            --source-revision "${GITHUB_SHA}"
+
+      - name: Validate assembled plugin for Codex
+        run: python "${CODEX_VALIDATOR}" "${DIST_ROOT}/marketplace/plugins/vivago-agent-cli"
+
+      - name: Validate assembled Marketplace for Claude Code
+        run: npx --yes --package @anthropic-ai/claude-code@2.1.220 -- claude plugin validate "${DIST_ROOT}/marketplace"
+
+      - name: Generate SPDX SBOM
+        run: |
+          python scripts/generate_spdx_sbom.py \
+            --marketplace "${DIST_ROOT}/marketplace" \
+            --go-mod go.mod \
+            --requirements requirements-dev.txt \
+            --version "${BETA_VERSION}" \
+            --source-revision "${GITHUB_SHA}" \
+            --created "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" \
+            --output "${DIST_ROOT}/marketplace/SBOM.spdx.json"
+
+      - name: Build synthetic lower production Beta for lifecycle tests
+        run: |
+          set -euo pipefail
+          PREVIOUS_VERSION="$(python scripts/derive_previous_beta_version.py --version "${BETA_VERSION}")"
+          python scripts/build_beta_binaries.py \
+            --output "${DIST_ROOT}/previous-binaries" \
+            --version "${PREVIOUS_VERSION}" \
+            --source-revision "${GITHUB_SHA}"
+          python scripts/assemble_beta_distribution.py \
+            --plugin-template plugin \
+            --binary-root "${DIST_ROOT}/previous-binaries" \
+            --output "${DIST_ROOT}/previous-marketplace" \
+            --version "${PREVIOUS_VERSION}" \
+            --source-revision "${GITHUB_SHA}"
+          python scripts/verify_beta_distribution.py \
+            --marketplace "${DIST_ROOT}/previous-marketplace" \
+            --version "${PREVIOUS_VERSION}" \
+            --source-revision "${GITHUB_SHA}"
+
+      - name: Create mode-preserving Beta archive
+        run: |
+          set -euo pipefail
+          tar -C "${DIST_ROOT}/marketplace" -czf "${DIST_ROOT}/vivago-beta-marketplace.tar.gz" .
+          tar -C "${DIST_ROOT}/previous-marketplace" -czf "${DIST_ROOT}/vivago-beta-previous.tar.gz" .
+
+      - name: Upload validated Beta release input
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vivago-beta-release-${{ inputs.version }}-${{ github.sha }}
+          path: |
+            ${{ env.DIST_ROOT }}/vivago-beta-marketplace.tar.gz
+            ${{ env.DIST_ROOT }}/vivago-beta-previous.tar.gz
+          if-no-files-found: error
+          retention-days: 14
+
+  native-platform-smoke:
+    name: Native Beta smoke (${{ matrix.target }})
+    needs: build
+    if: github.repository == 'HiDream-ai/vivago-agent-cli' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: darwin-arm64
+            runner: macos-26
+          - target: darwin-amd64
+            runner: macos-26-intel
+          - target: linux-arm64
+            runner: ubuntu-24.04-arm
+          - target: linux-amd64
+            runner: ubuntu-24.04
+          - target: windows-arm64
+            runner: windows-11-arm
+          - target: windows-amd64
+            runner: windows-2025
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    env:
+      NATIVE_ROOT: ${{ github.workspace }}/.ci-beta-native
+    steps:
+      - name: Check out native verifier
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Download validated Beta release input
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: vivago-beta-release-${{ inputs.version }}-${{ github.sha }}
+          path: ${{ env.NATIVE_ROOT }}
+
+      - name: Run native production launcher smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/verify_beta_native_platform.py \
+            --archive "${NATIVE_ROOT}/vivago-beta-marketplace.tar.gz" \
+            --expected-target "${{ matrix.target }}" \
+            --version "${BETA_VERSION}" \
+            --source-revision "${GITHUB_SHA}" \
+            --report "${NATIVE_ROOT}/native-${{ matrix.target }}.json"
+
+      - name: Upload native Beta smoke report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vivago-beta-native-${{ matrix.target }}-${{ github.sha }}
+          path: ${{ env.NATIVE_ROOT }}/native-${{ matrix.target }}.json
+          if-no-files-found: error
+          retention-days: 14
+
+  host-plugin-lifecycle:
+    name: Beta host lifecycle (${{ matrix.target }}, ${{ matrix.host }})
+    needs: build
+    if: github.repository == 'HiDream-ai/vivago-agent-cli' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: darwin-arm64
+            runner: macos-26
+            host: codex
+            package: "@openai/codex@0.147.0"
+            host-version: "0.147.0"
+          - target: darwin-arm64
+            runner: macos-26
+            host: claude-code
+            package: "@anthropic-ai/claude-code@2.1.220"
+            host-version: "2.1.220"
+          - target: darwin-amd64
+            runner: macos-26-intel
+            host: codex
+            package: "@openai/codex@0.147.0"
+            host-version: "0.147.0"
+          - target: darwin-amd64
+            runner: macos-26-intel
+            host: claude-code
+            package: "@anthropic-ai/claude-code@2.1.220"
+            host-version: "2.1.220"
+          - target: linux-arm64
+            runner: ubuntu-24.04-arm
+            host: codex
+            package: "@openai/codex@0.147.0"
+            host-version: "0.147.0"
+          - target: linux-arm64
+            runner: ubuntu-24.04-arm
+            host: claude-code
+            package: "@anthropic-ai/claude-code@2.1.220"
+            host-version: "2.1.220"
+          - target: linux-amd64
+            runner: ubuntu-24.04
+            host: codex
+            package: "@openai/codex@0.147.0"
+            host-version: "0.147.0"
+          - target: linux-amd64
+            runner: ubuntu-24.04
+            host: claude-code
+            package: "@anthropic-ai/claude-code@2.1.220"
+            host-version: "2.1.220"
+          - target: windows-arm64
+            runner: windows-11-arm
+            host: codex
+            package: "@openai/codex@0.147.0"
+            host-version: "0.147.0"
+          - target: windows-arm64
+            runner: windows-11-arm
+            host: claude-code
+            package: "@anthropic-ai/claude-code@2.1.220"
+            host-version: "2.1.220"
+          - target: windows-amd64
+            runner: windows-2025
+            host: codex
+            package: "@openai/codex@0.147.0"
+            host-version: "0.147.0"
+          - target: windows-amd64
+            runner: windows-2025
+            host: claude-code
+            package: "@anthropic-ai/claude-code@2.1.220"
+            host-version: "2.1.220"
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    env:
+      HOST_ROOT: ${{ github.workspace }}/.ci-beta-host
+    steps:
+      - name: Check out lifecycle verifier
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+
+      - name: Download candidate and synthetic previous Beta
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: vivago-beta-release-${{ inputs.version }}-${{ github.sha }}
+          path: ${{ env.HOST_ROOT }}/input
+
+      - name: Install pinned host
+        run: npm install --global "${{ matrix.package }}"
+
+      - name: Verify isolated install, upgrade, rollback, and re-upgrade
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "${HOST_ROOT}/previous-marketplace"
+          tar -xzf "${HOST_ROOT}/input/vivago-beta-previous.tar.gz" \
+            -C "${HOST_ROOT}/previous-marketplace"
+          python scripts/verify_beta_host_plugin_lifecycle.py \
+            --archive "${HOST_ROOT}/input/vivago-beta-marketplace.tar.gz" \
+            --previous-marketplace "${HOST_ROOT}/previous-marketplace" \
+            --expected-target "${{ matrix.target }}" \
+            --host "${{ matrix.host }}" \
+            --host-version "${{ matrix.host-version }}" \
+            --candidate-version "${BETA_VERSION}" \
+            --source-revision "${GITHUB_SHA}" \
+            --report "${HOST_ROOT}/reports/host-${{ matrix.target }}-${{ matrix.host }}.json"
+
+      - name: Upload Beta host lifecycle report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: beta-host-lifecycle-${{ matrix.target }}-${{ matrix.host }}-${{ github.sha }}
+          path: ${{ env.HOST_ROOT }}/reports/host-${{ matrix.target }}-${{ matrix.host }}.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  publish:
+    name: Publish production Prerelease and Marketplace
+    needs: [build, native-platform-smoke, host-plugin-lifecycle]
+    if: github.repository == 'HiDream-ai/vivago-agent-cli' && github.ref == 'refs/heads/main'
+    environment: production-beta
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    env:
+      ARCHIVE: ${{ github.workspace }}/.ci-beta-release/vivago-beta-marketplace.tar.gz
+      MARKETPLACE: ${{ github.workspace }}/.ci-beta-release/marketplace
+      MARKETPLACE_WORKTREE: ${{ github.workspace }}/.ci-marketplace
+      RELEASE_JSON: ${{ github.workspace }}/.ci-beta-release/existing-release.json
+    steps:
+      - name: Check out exact release source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Download validated Beta release input
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: vivago-beta-release-${{ inputs.version }}-${{ github.sha }}
+          path: ${{ github.workspace }}/.ci-beta-release
+
+      - name: Reverify downloaded Marketplace
+        run: |
+          set -euo pipefail
+          mkdir -p "${MARKETPLACE}"
+          tar -xzf "${ARCHIVE}" -C "${MARKETPLACE}"
+          python scripts/verify_beta_distribution.py \
+            --marketplace "${MARKETPLACE}" \
+            --version "${BETA_VERSION}" \
+            --source-revision "${GITHUB_SHA}"
+
+      - name: Validate fresh or resumable release state
+        id: release_state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          set +e
+          git ls-remote --exit-code --tags origin "refs/tags/v${BETA_VERSION}" >/dev/null 2>&1
+          tag_lookup_status=$?
+          set -e
+          case "${tag_lookup_status}" in
+            0)
+              git fetch --no-tags origin "refs/tags/v${BETA_VERSION}"
+              tag_revision="$(git rev-list -n 1 FETCH_HEAD)"
+              gh release view "v${BETA_VERSION}" \
+                --repo "${GITHUB_REPOSITORY}" \
+                --json tagName,targetCommitish,isPrerelease,isDraft,assets \
+                > "${RELEASE_JSON}"
+              python scripts/validate_beta_release_state.py \
+                --version "${BETA_VERSION}" \
+                --source-revision "${GITHUB_SHA}" \
+                --archive "${ARCHIVE}" \
+                --sbom "${MARKETPLACE}/SBOM.spdx.json" \
+                --checksums "${MARKETPLACE}/plugins/vivago-agent-cli/SHA256SUMS" \
+                --tag-revision "${tag_revision}" \
+                --release-json "${RELEASE_JSON}"
+              printf 'create_release=false\n' >> "${GITHUB_OUTPUT}"
+              ;;
+            2)
+              python scripts/validate_beta_release_state.py \
+                --version "${BETA_VERSION}" \
+                --source-revision "${GITHUB_SHA}" \
+                --archive "${ARCHIVE}" \
+                --sbom "${MARKETPLACE}/SBOM.spdx.json" \
+                --checksums "${MARKETPLACE}/plugins/vivago-agent-cli/SHA256SUMS"
+              printf 'create_release=true\n' >> "${GITHUB_OUTPUT}"
+              ;;
+            *)
+              printf 'unable to verify whether release tag exists\n' >&2
+              exit "${tag_lookup_status}"
+              ;;
+          esac
+
+      - name: Attest Beta archive build provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: ${{ env.ARCHIVE }}
+
+      - name: Attest Beta archive SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: ${{ env.ARCHIVE }}
+          sbom-path: ${{ env.MARKETPLACE }}/SBOM.spdx.json
+
+      - name: Create immutable GitHub Prerelease
+        if: steps.release_state.outputs.create_release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "v${BETA_VERSION}" \
+            "${ARCHIVE}" \
+            "${MARKETPLACE}/SBOM.spdx.json" \
+            "${MARKETPLACE}/plugins/vivago-agent-cli/SHA256SUMS" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --target "${GITHUB_SHA}" \
+            --title "VivagoAgent CLI ${BETA_VERSION}" \
+            --notes "Public Beta built from reviewed company source ${GITHUB_SHA}. Uses the overseas production environment only." \
+            --prerelease
+
+      - name: Update production Marketplace with a fast-forward commit
+        run: |
+          set -euo pipefail
+          set +e
+          git ls-remote --exit-code --heads origin refs/heads/marketplace >/dev/null 2>&1
+          marketplace_lookup_status=$?
+          set -e
+          case "${marketplace_lookup_status}" in
+            0)
+              git fetch origin refs/heads/marketplace:refs/remotes/origin/marketplace
+              git worktree add --detach "${MARKETPLACE_WORKTREE}" origin/marketplace
+              python scripts/validate_beta_marketplace_update.py \
+                --candidate-version "${BETA_VERSION}" \
+                --candidate-revision "${GITHUB_SHA}" \
+                --existing-build-info \
+                  "${MARKETPLACE_WORKTREE}/plugins/vivago-agent-cli/BUILD_INFO.json"
+              ;;
+            2)
+              git worktree add --detach "${MARKETPLACE_WORKTREE}" "${GITHUB_SHA}"
+              git -C "${MARKETPLACE_WORKTREE}" checkout --orphan marketplace
+              python scripts/validate_beta_marketplace_update.py \
+                --candidate-version "${BETA_VERSION}" \
+                --candidate-revision "${GITHUB_SHA}"
+              ;;
+            *)
+              printf 'unable to verify whether marketplace branch exists\n' >&2
+              exit "${marketplace_lookup_status}"
+              ;;
+          esac
+          rsync -a --delete --exclude=.git "${MARKETPLACE}/" "${MARKETPLACE_WORKTREE}/"
+          git -C "${MARKETPLACE_WORKTREE}" add --all
+          if git -C "${MARKETPLACE_WORKTREE}" diff --cached --quiet; then
+            printf 'marketplace already contains version %s\n' "${BETA_VERSION}"
+          else
+            git -C "${MARKETPLACE_WORKTREE}" \
+              -c "user.name=github-actions[bot]" \
+              -c "user.email=41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -m "release: publish vivago ${BETA_VERSION}"
+            git -C "${MARKETPLACE_WORKTREE}" push origin HEAD:marketplace
+          fi

@@ -1,0 +1,186 @@
+name: Development CI
+
+on:
+  pull_request:
+  push:
+    branches-ignore:
+      - dev-marketplace
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: development-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-and-package:
+    name: Test, validate, and package dev Marketplace
+    if: github.repository == 'ChaoXia-Beginer/vivago-agent-cli'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GOCACHE: ${{ github.workspace }}/.ci-go-cache
+      DEV_VERSION: 0.0.0-dev.${{ github.run_number }}
+      DIST_ROOT: ${{ github.workspace }}/.ci-dist
+      CODEX_VALIDATOR: ${{ github.workspace }}/.ci-validate-plugin.py
+      CODEX_VALIDATOR_SHA256: ebda00d55d7518b127f675f062fb5c6e7a1ffdc0a99df1a55ac594400d7d3228
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: 1.25.12
+          cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Set up Node.js for Claude Code validation
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+
+      - name: Install validation dependencies
+        run: python -m pip install --requirement requirements-dev.txt
+
+      - name: Fetch pinned official Codex plugin validator
+        run: |
+          set -euo pipefail
+          curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error \
+            --output "${CODEX_VALIDATOR}" \
+            https://raw.githubusercontent.com/openai/codex/e75a1888d7e91ce56fc90d0edd32a9e6a8974686/codex-rs/skills/src/assets/samples/plugin-creator/scripts/validate_plugin.py
+          printf '%s  %s\n' "${CODEX_VALIDATOR_SHA256}" "${CODEX_VALIDATOR}" \
+            | sha256sum --check
+
+      - name: Run default Go tests
+        run: go test ./...
+
+      - name: Run prod-profile Go tests
+        run: go test -tags prod ./...
+
+      - name: Run Go race tests
+        run: go test -race ./...
+
+      - name: Run Go vet
+        run: go vet ./...
+
+      - name: Run distribution and workflow tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Validate source plugin for Codex
+        run: python "${CODEX_VALIDATOR}" plugin
+
+      - name: Build six development binaries
+        run: |
+          set -euo pipefail
+          python scripts/build_go_binaries.py \
+            --output "${DIST_ROOT}/binaries" \
+            --version "${DEV_VERSION}" \
+            --source-revision "${GITHUB_SHA}"
+
+      - name: Assemble vivago-dev Marketplace
+        run: |
+          set -euo pipefail
+          python scripts/assemble_go_distribution.py \
+            --plugin-template plugin \
+            --binary-root "${DIST_ROOT}/binaries" \
+            --output "${DIST_ROOT}/marketplace" \
+            --version "${DEV_VERSION}" \
+            --source-revision "${GITHUB_SHA}"
+
+      - name: Verify checksums, provenance, and environment boundary
+        run: |
+          set -euo pipefail
+          python scripts/verify_dev_distribution.py \
+            --marketplace "${DIST_ROOT}/marketplace" \
+            --version "${DEV_VERSION}" \
+            --source-revision "${GITHUB_SHA}"
+
+      - name: Validate assembled plugin for Codex
+        run: python "${CODEX_VALIDATOR}" "${DIST_ROOT}/marketplace/plugins/vivago-agent-cli"
+
+      - name: Validate assembled Marketplace for Claude Code
+        run: npx --yes --package @anthropic-ai/claude-code@2.1.89 -- claude plugin validate "${DIST_ROOT}/marketplace"
+
+      - name: Create mode-preserving development archive
+        run: |
+          set -euo pipefail
+          tar -C "${DIST_ROOT}/marketplace" -czf \
+            "${DIST_ROOT}/vivago-dev-${DEV_VERSION}-${GITHUB_SHA}.tar.gz" .
+
+      - name: Upload development Marketplace
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vivago-dev-${{ env.DEV_VERSION }}-${{ github.sha }}
+          path: ${{ env.DIST_ROOT }}/vivago-dev-${{ env.DEV_VERSION }}-${{ github.sha }}.tar.gz
+          if-no-files-found: error
+          retention-days: 14
+
+  native-platform-smoke:
+    name: Native smoke (${{ matrix.target }})
+    needs: quality-and-package
+    if: github.repository == 'ChaoXia-Beginer/vivago-agent-cli' && github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: darwin-arm64
+            runner: macos-26
+          - target: darwin-amd64
+            runner: macos-26-intel
+          - target: linux-arm64
+            runner: ubuntu-24.04-arm
+          - target: linux-amd64
+            runner: ubuntu-24.04
+          - target: windows-arm64
+            runner: windows-11-arm
+          - target: windows-amd64
+            runner: windows-2025
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    env:
+      DEV_VERSION: 0.0.0-dev.${{ github.run_number }}
+      NATIVE_ROOT: ${{ github.workspace }}/.ci-native
+    steps:
+      - name: Check out verifier
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Download the shared development Marketplace
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: vivago-dev-${{ env.DEV_VERSION }}-${{ github.sha }}
+          path: ${{ env.NATIVE_ROOT }}
+
+      - name: Run native launcher smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/verify_native_platform.py \
+            --archive "${NATIVE_ROOT}/vivago-dev-${DEV_VERSION}-${GITHUB_SHA}.tar.gz" \
+            --expected-target "${{ matrix.target }}" \
+            --version "${DEV_VERSION}" \
+            --source-revision "${GITHUB_SHA}" \
+            --report "${NATIVE_ROOT}/native-${{ matrix.target }}.json"
+
+      - name: Upload native smoke report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vivago-native-${{ matrix.target }}-${{ github.sha }}
+          path: ${{ env.NATIVE_ROOT }}/native-${{ matrix.target }}.json
+          if-no-files-found: error
+          retention-days: 14

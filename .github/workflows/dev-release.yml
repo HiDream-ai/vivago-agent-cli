@@ -1,0 +1,332 @@
+name: Manual Development Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Development SemVer without the v prefix, for example 0.3.0-dev.4
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vivago-dev-release-${{ github.repository }}
+  cancel-in-progress: false
+
+env:
+  DEV_VERSION: ${{ inputs.version }}
+  CODEX_VALIDATOR_SHA256: ebda00d55d7518b127f675f062fb5c6e7a1ffdc0a99df1a55ac594400d7d3228
+
+jobs:
+  build:
+    name: Rebuild and validate development release
+    if: github.repository == 'ChaoXia-Beginer/vivago-agent-cli'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GOCACHE: ${{ github.workspace }}/.ci-go-cache
+      DIST_ROOT: ${{ github.workspace }}/.ci-dist
+      CODEX_VALIDATOR: ${{ github.workspace }}/.ci-validate-plugin.py
+    steps:
+      - name: Check out selected source revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: 1.25.12
+          cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Set up Node.js for Claude Code validation
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+
+      - name: Enforce the personal development release policy
+        run: |
+          python scripts/validate_dev_release_policy.py \
+            --version "${DEV_VERSION}" \
+            --repository "${{ github.repository }}" \
+            --ref "${{ github.ref }}" \
+            --source-revision "${GITHUB_SHA}"
+
+      - name: Install validation dependencies
+        run: python -m pip install --requirement requirements-dev.txt
+
+      - name: Fetch pinned official Codex plugin validator
+        run: |
+          set -euo pipefail
+          curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error \
+            --output "${CODEX_VALIDATOR}" \
+            https://raw.githubusercontent.com/openai/codex/e75a1888d7e91ce56fc90d0edd32a9e6a8974686/codex-rs/skills/src/assets/samples/plugin-creator/scripts/validate_plugin.py
+          printf '%s  %s\n' "${CODEX_VALIDATOR_SHA256}" "${CODEX_VALIDATOR}" \
+            | sha256sum --check
+
+      - name: Run default Go tests
+        run: go test ./...
+
+      - name: Run prod-profile Go tests
+        run: go test -tags prod ./...
+
+      - name: Run Go race tests
+        run: go test -race ./...
+
+      - name: Run Go vet
+        run: go vet ./...
+
+      - name: Run distribution and workflow tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Validate source plugin for Codex
+        run: python "${CODEX_VALIDATOR}" plugin
+
+      - name: Build six development binaries
+        run: |
+          set -euo pipefail
+          python scripts/build_go_binaries.py \
+            --output "${DIST_ROOT}/binaries" \
+            --version "${DEV_VERSION}" \
+            --source-revision "${GITHUB_SHA}"
+
+      - name: Assemble vivago-dev Marketplace
+        run: |
+          set -euo pipefail
+          python scripts/assemble_go_distribution.py \
+            --plugin-template plugin \
+            --binary-root "${DIST_ROOT}/binaries" \
+            --output "${DIST_ROOT}/marketplace" \
+            --version "${DEV_VERSION}" \
+            --source-revision "${GITHUB_SHA}"
+
+      - name: Verify checksums, provenance, and environment boundary
+        run: |
+          set -euo pipefail
+          python scripts/verify_dev_distribution.py \
+            --marketplace "${DIST_ROOT}/marketplace" \
+            --version "${DEV_VERSION}" \
+            --source-revision "${GITHUB_SHA}"
+
+      - name: Validate assembled plugin for Codex
+        run: python "${CODEX_VALIDATOR}" "${DIST_ROOT}/marketplace/plugins/vivago-agent-cli"
+
+      - name: Validate assembled Marketplace for Claude Code
+        run: npx --yes --package @anthropic-ai/claude-code@2.1.89 -- claude plugin validate "${DIST_ROOT}/marketplace"
+
+      - name: Create mode-preserving development archive
+        run: |
+          set -euo pipefail
+          tar -C "${DIST_ROOT}/marketplace" -czf \
+            "${DIST_ROOT}/vivago-dev-marketplace.tar.gz" .
+
+      - name: Upload validated development release input
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vivago-dev-release-${{ inputs.version }}-${{ github.sha }}
+          path: ${{ env.DIST_ROOT }}/vivago-dev-marketplace.tar.gz
+          if-no-files-found: error
+          retention-days: 14
+
+  host-plugin-lifecycle:
+    name: Host lifecycle (${{ matrix.target }}, ${{ matrix.host }})
+    needs: build
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: darwin-arm64
+            runner: macos-26
+            host: codex
+            package: "@openai/codex@0.147.0"
+            host-version: "0.147.0"
+          - target: darwin-arm64
+            runner: macos-26
+            host: claude-code
+            package: "@anthropic-ai/claude-code@2.1.220"
+            host-version: "2.1.220"
+          - target: darwin-amd64
+            runner: macos-26-intel
+            host: codex
+            package: "@openai/codex@0.147.0"
+            host-version: "0.147.0"
+          - target: darwin-amd64
+            runner: macos-26-intel
+            host: claude-code
+            package: "@anthropic-ai/claude-code@2.1.220"
+            host-version: "2.1.220"
+          - target: linux-arm64
+            runner: ubuntu-24.04-arm
+            host: codex
+            package: "@openai/codex@0.147.0"
+            host-version: "0.147.0"
+          - target: linux-arm64
+            runner: ubuntu-24.04-arm
+            host: claude-code
+            package: "@anthropic-ai/claude-code@2.1.220"
+            host-version: "2.1.220"
+          - target: linux-amd64
+            runner: ubuntu-24.04
+            host: codex
+            package: "@openai/codex@0.147.0"
+            host-version: "0.147.0"
+          - target: linux-amd64
+            runner: ubuntu-24.04
+            host: claude-code
+            package: "@anthropic-ai/claude-code@2.1.220"
+            host-version: "2.1.220"
+          - target: windows-arm64
+            runner: windows-11-arm
+            host: codex
+            package: "@openai/codex@0.147.0"
+            host-version: "0.147.0"
+          - target: windows-arm64
+            runner: windows-11-arm
+            host: claude-code
+            package: "@anthropic-ai/claude-code@2.1.220"
+            host-version: "2.1.220"
+          - target: windows-amd64
+            runner: windows-2025
+            host: codex
+            package: "@openai/codex@0.147.0"
+            host-version: "0.147.0"
+          - target: windows-amd64
+            runner: windows-2025
+            host: claude-code
+            package: "@anthropic-ai/claude-code@2.1.220"
+            host-version: "2.1.220"
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    steps:
+      - name: Check out release verifier
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Check out previous development Marketplace
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: dev-marketplace
+          path: .ci-host/previous-marketplace
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+
+      - name: Download candidate development Marketplace
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: vivago-dev-release-${{ inputs.version }}-${{ github.sha }}
+          path: ${{ github.workspace }}/.ci-host/candidate
+
+      - name: Install pinned host
+        run: npm install --global "${{ matrix.package }}"
+
+      - name: Verify isolated install, upgrade, rollback, and re-upgrade
+        run: python scripts/verify_host_plugin_lifecycle.py --archive "${{ github.workspace }}/.ci-host/candidate/vivago-dev-marketplace.tar.gz" --previous-marketplace "${{ github.workspace }}/.ci-host/previous-marketplace" --expected-target "${{ matrix.target }}" --host "${{ matrix.host }}" --host-version "${{ matrix.host-version }}" --candidate-version "${{ inputs.version }}" --source-revision "${{ github.sha }}" --report "${{ github.workspace }}/.ci-host/reports/host-${{ matrix.target }}-${{ matrix.host }}.json"
+
+      - name: Upload host lifecycle report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: host-lifecycle-${{ matrix.target }}-${{ matrix.host }}-${{ github.sha }}
+          path: ${{ github.workspace }}/.ci-host/reports/host-${{ matrix.target }}-${{ matrix.host }}.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  publish:
+    name: Publish Prerelease and dev Marketplace
+    needs: [build, host-plugin-lifecycle]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      ARCHIVE: ${{ github.workspace }}/.ci-release/vivago-dev-marketplace.tar.gz
+      MARKETPLACE: ${{ github.workspace }}/.ci-release/marketplace
+      MARKETPLACE_WORKTREE: ${{ github.workspace }}/.ci-dev-marketplace
+    steps:
+      - name: Check out the exact release source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Download validated development release input
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: vivago-dev-release-${{ inputs.version }}-${{ github.sha }}
+          path: ${{ github.workspace }}/.ci-release
+
+      - name: Reverify downloaded Marketplace
+        run: |
+          set -euo pipefail
+          mkdir -p "${MARKETPLACE}"
+          tar -xzf "${ARCHIVE}" -C "${MARKETPLACE}"
+          python scripts/verify_dev_distribution.py \
+            --marketplace "${MARKETPLACE}" \
+            --version "${DEV_VERSION}" \
+            --source-revision "${GITHUB_SHA}"
+
+      - name: Reject an existing immutable release tag
+        run: |
+          set -euo pipefail
+          set +e
+          git ls-remote --exit-code --tags origin "refs/tags/v${DEV_VERSION}" >/dev/null 2>&1
+          tag_lookup_status=$?
+          set -e
+          case "${tag_lookup_status}" in
+            0)
+              printf 'release tag already exists and will not be overwritten: v%s\n' "${DEV_VERSION}" >&2
+              exit 1
+              ;;
+            2)
+              ;;
+            *)
+              printf 'unable to verify whether release tag exists\n' >&2
+              exit "${tag_lookup_status}"
+              ;;
+          esac
+
+      - name: Update dev Marketplace with a fast-forward commit
+        run: |
+          set -euo pipefail
+          git fetch origin dev-marketplace
+          git worktree add "${MARKETPLACE_WORKTREE}" origin/dev-marketplace
+          rsync -a --delete --exclude=.git "${MARKETPLACE}/" "${MARKETPLACE_WORKTREE}/"
+          git -C "${MARKETPLACE_WORKTREE}" add --all
+          if git -C "${MARKETPLACE_WORKTREE}" diff --cached --quiet; then
+            printf 'dev-marketplace already contains version %s\n' "${DEV_VERSION}"
+          else
+            git -C "${MARKETPLACE_WORKTREE}" \
+              -c "user.name=github-actions[bot]" \
+              -c "user.email=41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -m "release: publish vivago-dev ${DEV_VERSION}"
+            git -C "${MARKETPLACE_WORKTREE}" push origin HEAD:dev-marketplace
+          fi
+
+      - name: Create immutable GitHub Prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "v${DEV_VERSION}" "${ARCHIVE}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --target "${GITHUB_SHA}" \
+            --title "VivagoAgent CLI ${DEV_VERSION}" \
+            --notes "Development build from ${GITHUB_SHA}. Uses the overseas test environment only." \
+            --prerelease

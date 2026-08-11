@@ -1,0 +1,17 @@
+{
+  "name": "vivago-agent-cli",
+  "version": "0.3.0-dev.1",
+  "description": "Delegate creative and production tasks to VivagoAgent through a bundled cross-platform Go CLI without exposing internal business tools.",
+  "author": {
+    "name": "HiDream",
+    "url": "https://vivago.ai"
+  },
+  "homepage": "https://vivago.ai",
+  "license": "Proprietary",
+  "keywords": [
+    "vivago",
+    "agent-to-agent",
+    "creative-agent",
+    "claude-code"
+  ]
+}

@@ -1,0 +1,12 @@
+build/
+dist/
+*.spec
+__pycache__/
+*.py[cod]
+*.egg-info/
+.coverage
+.pytest_cache/
+.ruff_cache/
+.venv/
+.DS_Store
+.idea/

@@ -1,0 +1,2 @@
+# Required by the official Codex plugin validator; the CLI runtime does not use Python.
+PyYAML==6.0.3

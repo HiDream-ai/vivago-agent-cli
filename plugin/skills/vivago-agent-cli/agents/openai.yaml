@@ -1,0 +1,5 @@
+interface:
+  display_name: "Vivago Agent Cli"
+  short_description: "Delegate creative tasks to VivagoAgent"
+  brand_color: "#574DFF"
+  default_prompt: "Use $vivago-agent-cli to delegate this task to VivagoAgent."

@@ -1,0 +1,116 @@
+name: Manual Hosted L3
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Existing development version without the v prefix
+        required: true
+        type: string
+      source_revision:
+        description: Full source revision embedded in the development Marketplace
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vivago-hosted-l3-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  ticket-only-l3:
+    name: Ticket-only L3 (${{ matrix.target }})
+    if: github.repository == 'ChaoXia-Beginer/vivago-agent-cli' && github.ref == 'refs/heads/main'
+    environment: overseas-test-e2e
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        include:
+          - target: darwin-arm64
+            runner: macos-26
+          - target: darwin-amd64
+            runner: macos-26-intel
+          - target: linux-arm64
+            runner: ubuntu-24.04-arm
+          - target: linux-amd64
+            runner: ubuntu-24.04
+          - target: windows-arm64
+            runner: windows-11-arm
+          - target: windows-amd64
+            runner: windows-2025
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    env:
+      GOCACHE: ${{ github.workspace }}/.ci-l3/go-cache
+      L3_ROOT: ${{ github.workspace }}/.ci-l3
+      L3_VERSION: ${{ inputs.version }}
+      L3_SOURCE_REVISION: ${{ inputs.source_revision }}
+      L3_RUN_ID: ${{ github.run_id }}
+    steps:
+      - name: Check out the reviewed verifier source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check out the released development Marketplace
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: dev-marketplace
+          path: .ci-l3/marketplace
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: 1.25.12
+          cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+
+      - name: Install pinned Codex and Claude Code hosts
+        shell: bash
+        run: npm install --global "@openai/codex@0.147.0" "@anthropic-ai/claude-code@2.1.220"
+
+      - name: Seed one-time access credential without a refresh capability
+        shell: bash
+        env:
+          VIVAGO_E2E_TICKET: ${{ secrets.VIVAGO_E2E_TICKET }}
+        run: go run ./cmd/vivago-e2e-auth seed --minimum-validity 45m
+
+      - name: Run both-host online L3 checks
+        shell: bash
+        run: |
+          python scripts/verify_hosted_l3.py \
+            --marketplace "${L3_ROOT}/marketplace" \
+            --expected-target "${{ matrix.target }}" \
+            --expected-version "${L3_VERSION}" \
+            --source-revision "${L3_SOURCE_REVISION}" \
+            --run-id "${L3_RUN_ID}" \
+            --report "${L3_ROOT}/reports/l3-${{ matrix.target }}.json"
+
+      - name: Clear the runner credential
+        if: always()
+        shell: bash
+        run: go run ./cmd/vivago-e2e-auth clear
+
+      - name: Upload sanitized L3 report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: hosted-l3-${{ matrix.target }}-${{ github.sha }}
+          path: ${{ github.workspace }}/.ci-l3/reports/l3-${{ matrix.target }}.json
+          if-no-files-found: error
+          retention-days: 14
