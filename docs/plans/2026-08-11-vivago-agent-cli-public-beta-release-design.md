@@ -54,7 +54,7 @@ Tag 是 `v0.3.0-dev.7`、`v0.3.0-beta.1` 等，不存在名为 `N` 的分支或 
 | `Project`、`Conversation`、`Turn.source=cli` | 服务端已完成 |
 | `platform=web` 和 Web 可见性设计 | 已确定 |
 | 生产 `prod` profile | 已存在 |
-| 公司 GitHub 仓库和 Beta CI | 公司私有仓库和 Workflow 已建立；首次 Hosted Runner 已执行，Windows 生命周期解包问题已修复，等待 PR CI 复验 |
+| 公司 GitHub 仓库和 Beta CI | 公司私有仓库和 Workflow 已建立；PR #1 的 Beta Check 全绿，六平台原生 6/6、双宿主生命周期 12/12 |
 | 生产 Beta 构建、组装和校验脚本 | 已实现并完成本地验证 |
 | 海外生产受控冒烟 | 未完成 |
 | 公开仓库治理和安全材料 | 核心仓库文件已完成；公司法定主体、产品政策入口和仓库规则待确认 |

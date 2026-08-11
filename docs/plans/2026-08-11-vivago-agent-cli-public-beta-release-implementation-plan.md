@@ -9,19 +9,20 @@
 
 截至 2026-08-11，本分支已完成生产 Beta 构建与 Marketplace 组装、仓库绑定策略、六平台原生
 门禁脚本、双宿主生命周期门禁、公司规范 Go module 地址、SPDX 2.3 SBOM 和 GitHub 构建证明
-Workflow。公司 GitHub 首次 Hosted Runner 已完成 L0、六平台原生启动和 macOS/Linux 双宿主
-生命周期；Windows 四个宿主用例在进入插件校验前因 Git Bash 把盘符冒号解释为远端 tar 地址而
-失败。现已改用 Python 标准库跨平台解包，等待本 PR Hosted Runner 复验。
+Workflow。公司 GitHub PR #1 的 Beta Check（run `31481271742`）已经完成 L0、六平台原生启动和
+12 个双宿主生命周期用例。此前 Windows 四个宿主用例因 Git Bash 把盘符冒号解释为远端 tar 地址
+而失败；改用 Python 标准库跨平台解包后，Windows ARM64/x64 的 Codex 与 Claude Code 4/4
+全部通过。
 
 | 层级 | 当前本地结果 | 尚待完成 |
 | --- | --- | --- |
-| L0 静态与构建 | 本地 Python 114/114；Go default/prod/race/vet；公司 Hosted Runner 基线已通过；本分支新增 Dev/Beta 产物一致性与 profile 结构门禁 | 本 PR CI 重跑 |
-| L1 原生启动 | 公司 Hosted Runner 六平台 6/6 通过 | 本 PR CI 回归 |
-| L2 宿主生命周期 | macOS/Linux 8/8 通过；Windows 4 个组合均在解包阶段失败，未进入插件逻辑 | 使用跨平台解包后由本 PR CI 复验 Windows 4/4，目标 12/12 |
+| L0 静态与构建 | 本地 Python 114/114；Go default/prod/race/vet；公司 PR #1 Hosted Runner 全部通过；含 Dev/Beta 产物一致性与 profile 结构门禁 | 已完成 |
+| L1 原生启动 | 公司 PR #1 Hosted Runner 六平台 6/6 通过 | 已完成 |
+| L2 宿主生命周期 | 公司 PR #1 Hosted Runner 六平台 × Codex/Claude Code 12/12 通过，覆盖安装、升级、回滚、再升级 | 已完成 |
 | L3 海外生产 | 登录前检查通过；真实登录为 `BLOCKED/ENV`，生产 `/agent/login` 尚未部署 | 入口部署后重跑登录，再执行受控账号代表平台 6 个组合 |
 | 发布治理 | LICENSE、NOTICE、第三方声明、SECURITY、CODEOWNERS、SBOM 与 attestation 已完成 | 公司法定版权主体复核、公司仓库保护规则 |
 | 发布恢复 | 同版本、同 SHA、同资产摘要可续跑；旧任务和冲突制品失败关闭 | 公司仓库首次真实演练 |
-| Manifest 与 Skill 品牌 | 源码模板已中性化；Dev/Beta 的 Codex、Marketplace、Skill 显示名均统一；Beta 双 manifest 与 Skill 开发字样门禁、临时文件排除已补齐 | 公司 PR CI 重新组装并验证候选包 |
+| Manifest、Skill 与渠道一致性 | 源码模板已中性化；Dev/Beta 显示名、命令与插件文件保持一致；Beta 双 manifest、Skill 开发字样门禁和逐文件一致性测试均已通过公司 PR CI | 已完成 |
 | 对外安装文档 | README 和产品安装说明只保留公司 GitHub Beta，覆盖安装、升级、回滚、卸载与排障；个人 Dev 信息仅保留在内部开发文档 | 首个 Beta 发布后按真实 Tag 和 Release 页面复核命令 |
 
 ### 本地验证记录
@@ -44,7 +45,7 @@ Workflow。公司 GitHub 首次 Hosted Runner 已完成 L0、六平台原生启�
 | L1 本机真实包 | 原生门禁错误报告“不是海外生产 profile” | 校验器误用凭证账户名 `overseas-prod` 作为 doctor 环境 target；真实 CLI 固定返回 `overseas-production` | 校验器和测试统一到 `overseas-production`；凭证账户名保持不变 |
 | 本机固定宿主验证 | 系统现有 Codex/Claude Code 版本与 CI 固定版本不同 | 本机日常安装版本不等于发布矩阵版本 | 仅在临时目录安装固定版本，不修改用户全局宿主 |
 | L3 生产登录 | 网页进入现有生产站内页面，但 CLI 未收到 loopback 回调 | 用户确认生产 `/agent/login` 尚未部署，不属于已部署功能回归失败 | 标记 `BLOCKED/ENV` 并暂停生产鉴权测试；入口部署后从首次未登录用例重新执行 |
-| L2 Windows Hosted Runner | GNU tar 报 `Cannot connect to C:/D:`，四个宿主组合全部在解包前失败 | Git Bash 下 GNU tar 把 Windows 盘符冒号解释为远程归档语法 | Dev/Beta Release 和 Beta Check 统一改用 `python -m tarfile -e`；新增 Workflow 契约测试，等待 PR CI 复验 |
+| L2 Windows Hosted Runner | GNU tar 报 `Cannot connect to C:/D:`，四个宿主组合全部在解包前失败 | Git Bash 下 GNU tar 把 Windows 盘符冒号解释为远程归档语法 | Dev/Beta Release 和 Beta Check 统一改用 `python -m tarfile -e`；PR #1 Windows 四个宿主组合 4/4 通过 |
 | Dev/Beta 产品一致性 | 生产包曾禁用手动 `auth refresh`，个人 Marketplace 描述带 Development | profile 中混入了功能开关，组装器各自维护用户文案 | 删除 profile 功能开关，两种构建均支持同一命令；中性化文案并新增归一化逐文件产物对比 |
 
 ## 实施原则
