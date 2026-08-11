@@ -14,6 +14,11 @@ Workflow。公司 GitHub PR #1 的 Beta Check（run `31481271742`）已经完成
 而失败；改用 Python 标准库跨平台解包后，Windows ARM64/x64 的 Codex 与 Claude Code 4/4
 全部通过。
 
+个人开发通道随后发布了 `v0.3.0-dev.8`（run `31484366464`），六平台构建、6/6 原生启动和
+12/12 双宿主插件生命周期均通过。macOS ARM64 代表平台进一步完成 dev.8 登录刷新、退出、
+浏览器重登、Codex 自然语言选择 Skill 和 Web 可见性验证。Claude Code 模型调用按用户决定移出
+本轮范围；这不影响已经通过的 Claude Code 插件安装、升级、回滚和再升级结果。
+
 | 层级 | 当前本地结果 | 尚待完成 |
 | --- | --- | --- |
 | L0 静态与构建 | 本地 Python 114/114；Go default/prod/race/vet；公司 PR #1 Hosted Runner 全部通过；含 Dev/Beta 产物一致性与 profile 结构门禁 | 已完成 |
@@ -24,6 +29,8 @@ Workflow。公司 GitHub PR #1 的 Beta Check（run `31481271742`）已经完成
 | 发布恢复 | 同版本、同 SHA、同资产摘要可续跑；旧任务和冲突制品失败关闭 | 公司仓库首次真实演练 |
 | Manifest、Skill 与渠道一致性 | 源码模板已中性化；Dev/Beta 显示名、命令与插件文件保持一致；Beta 双 manifest、Skill 开发字样门禁和逐文件一致性测试均已通过公司 PR CI | 已完成 |
 | 对外安装文档 | README 和产品安装说明只保留公司 GitHub Beta，覆盖安装、升级、回滚、卸载与排障；个人 Dev 信息仅保留在内部开发文档 | 首个 Beta 发布后按真实 Tag 和 Release 页面复核命令 |
+| Dev.8 代表平台收口 | refresh、logout、浏览器重登、Codex 自然语言调用、服务端历史 Web 可见性均 PASS | Claude Code 模型调用本轮不验证 |
+| `production-beta` Environment | 已创建并限制为公司 `main` | 当前私有仓库套餐不支持 reviewer/wait timer；暂由仓库写权限与手动发布入口授权，公开或升级套餐后补 reviewer |
 
 ### 本地验证记录
 
@@ -37,6 +44,9 @@ Workflow。公司 GitHub PR #1 的 Beta Check（run `31481271742`）已经完成
 | Claude Code 2.1.220 | PASS | 安装、升级、回滚、再升级全部通过，隔离配置中未登录 |
 | 海外生产登录前检查 | PASS | 精确生产构建、生产域名、macOS Keychain 和初始未登录状态均符合预期 |
 | 海外生产真实登录 | BLOCKED | 生产 `/agent/login` 尚未部署；等待进程已取消，未保存生产凭证，未调用业务 API |
+| 海外测试 dev.8 鉴权闭环 | PASS | Keychain refresh、logout、浏览器 loopback 重登均通过，没有打印凭据 |
+| Codex 自然语言选择 Skill | PASS | 全新模型会话主动选择 dev.8 插件并完成一条低成本文本任务 |
+| Web 可见性 | PASS | CLI 创建的项目、用户请求和 VivagoAgent 回复可在海外测试 Web 页面打开 |
 
 ### 已发现并处理的问题
 
@@ -112,7 +122,7 @@ Workflow。公司 GitHub PR #1 的 Beta Check（run `31481271742`）已经完成
 - Beta Job 校验公司仓库、`main`、版本和完整源码 SHA；
 - Workflow 不提供环境/profile/URL/channel 输入；
 - 发布前重新构建并重新校验；
-- 发布 Job 使用受保护的 `production-beta` Environment；
+- 发布 Job 使用 `production-beta` Environment，并只允许公司 `main`；
 - 只在发布 Job 使用 `contents: write`；
 - 更新 `marketplace` 不强推，已有 Tag 不覆盖；
 - 所有第三方 Action 固定完整 Commit SHA。
@@ -142,7 +152,9 @@ Workflow。公司 GitHub PR #1 的 Beta Check（run `31481271742`）已经完成
 - 输入 `0.3.0-beta.N`；
 - 从公司 `main` 的确定 SHA 重新构建；
 - 运行与 Beta Check 相同门禁；
-- 等待 `production-beta` 审批；
+- 进入 `production-beta` Environment；当前私有仓库套餐不支持 reviewer，暂由公司仓库写权限、
+  手动 `workflow_dispatch`、公司仓库与 `main` 硬校验共同承担人工授权；仓库公开或套餐升级后补
+  至少一名 reviewer；
 - 创建不可变 Prerelease；
 - 普通快进更新 `marketplace`；
 - 支持基于相同版本和 SHA 补完安全的部分失败，不覆盖不同制品。

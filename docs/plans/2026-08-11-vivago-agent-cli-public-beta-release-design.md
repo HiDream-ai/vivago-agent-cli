@@ -49,12 +49,12 @@ Tag 是 `v0.3.0-dev.7`、`v0.3.0-beta.1` 等，不存在名为 `N` 的分支或 
 | `v0.3.0-dev.N` 开发版发布 | 已完成 |
 | 六平台乘两个宿主安装、升级、回滚门禁 | 已完成 |
 | 海外测试环境 ticket-only L3 | 12/12 通过 |
-| 登录、刷新、退出和本地凭证存储 | 已实现，代表平台已联调 |
+| 登录、刷新、退出和本地凭证存储 | 已实现；dev.8 代表平台 refresh、logout、浏览器重登通过 |
 | 联网图片搜索 | 已支持 |
 | `Project`、`Conversation`、`Turn.source=cli` | 服务端已完成 |
-| `platform=web` 和 Web 可见性设计 | 已确定 |
+| `platform=web` 和 Web 可见性 | 已确定；dev.8 CLI 项目、请求和回复已在海外测试 Web 验证可见 |
 | 生产 `prod` profile | 已存在 |
-| 公司 GitHub 仓库和 Beta CI | 公司私有仓库和 Workflow 已建立；PR #1 的 Beta Check 全绿，六平台原生 6/6、双宿主生命周期 12/12 |
+| 公司 GitHub 仓库和 Beta CI | 公司私有仓库、Workflow 和 `production-beta` Environment 已建立；PR #1 的 Beta Check 全绿，六平台原生 6/6、双宿主生命周期 12/12 |
 | 生产 Beta 构建、组装和校验脚本 | 已实现并完成本地验证 |
 | 海外生产受控冒烟 | 未完成 |
 | 公开仓库治理和安全材料 | 核心仓库文件已完成；公司法定主体、产品政策入口和仓库规则待确认 |
@@ -223,13 +223,16 @@ Beta Check 不创建 Tag 或 Release，也不修改 `marketplace`。
 5. 使用 `-tags prod` 构建六平台二进制。
 6. 组装并独立校验生产 Marketplace。
 7. 执行海外生产环境受控冒烟。
-8. 等待 GitHub `production-beta` Environment 人工批准。
+8. 进入 GitHub `production-beta` Environment；只允许公司 `main`。当前私有仓库套餐不支持
+   required reviewer，暂以公司仓库写权限和手动触发作为人工授权；仓库公开或套餐升级后启用
+   至少一名 reviewer。
 9. 创建不可变 Tag 和 GitHub Prerelease。
 10. 使用普通快进提交更新 CI 生成的 `marketplace`。
 11. 上传 checksum、SBOM 和构建证明。
 
-Push 到公司仓库不会直接给外部用户发布。只有手动运行 `Publish Beta` 并通过生产审批，才会
-改变公开安装通道。
+Push 到公司仓库不会直接给外部用户发布。只有具备公司仓库写权限的人手动运行 `Publish Beta`、
+通过仓库/分支/版本硬校验并完成生产确认，才会改变公开安装通道。GitHub 套餐支持 Environment
+reviewer 后，再把独立 reviewer 作为强制门禁补上。
 
 发布过程需要可恢复：Release 已创建但 Marketplace 更新失败时，旧 Marketplace 继续可用；
 修复任务只能基于相同版本和源码 SHA 补完剩余步骤，不能覆盖另一个构建结果。
@@ -397,7 +400,7 @@ Beta 包。
 | 状态检查 | Beta Check 必须通过 |
 | Force Push 和删除 `main` | 禁止 |
 | `marketplace` | 只允许 GitHub Actions 写入 |
-| `production-beta` | 至少 1 名人工批准 |
+| `production-beta` | 已创建且只允许公司 `main`；当前私有仓库套餐以仓库写权限和手动触发授权，公开或升级套餐后补至少 1 名 reviewer |
 | Actions 默认权限 | `contents: read` |
 | 发布 Job | 仅发布阶段使用 `contents: write` |
 | Release Tag | 不覆盖、不移动、不复用 |
@@ -552,5 +555,5 @@ CLI 来源限流不能替代用户全局配额。
   -> 发布 v0.3.0-beta.1
 ```
 
-用户需要介入的节点是公司 GitHub 权限与 Environment 审批、海外生产浏览器登录，以及最终公开
-发布审批。其余源码、脚本、测试、文档和 CI 工作可以在本仓库内继续完成。
+用户需要介入的节点是海外生产浏览器登录、GitHub reviewer 能力补齐（仓库公开或套餐升级后）
+以及最终公开发布确认。其余源码、脚本、测试、文档和 CI 工作可以在本仓库内继续完成。

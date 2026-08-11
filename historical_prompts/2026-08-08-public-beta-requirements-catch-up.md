@@ -84,6 +84,11 @@ owner of server-side conversation history.
 - Public Beta release artifacts should be reproducible and accompanied by integrity metadata.
 - Production signing, notarization, official marketplace review, Hosted MCP, and standard OAuth
   are follow-up hardening work rather than prerequisites for the first controlled public Beta.
+- The `0.3.0-dev.8` pre-production closure should complete all safe overseas-test and repository
+  readiness work, then stop before production business validation until production `/agent/login`
+  is deployed. The current batch includes Codex model-driven Skill selection and Web visibility;
+  Claude Code model-driven selection is explicitly excluded at the user's request, without
+  invalidating its already completed plugin installation lifecycle coverage.
 
 ### Branch and repository strategy
 
@@ -103,6 +108,12 @@ owner of server-side conversation history.
 - The company GitHub CI is the fixed public Beta channel: it rebuilds reviewed company `main`
   commits with the production profile, publishes `v0.3.0-beta.N` prereleases, and updates only
   `marketplace` after protected production approval.
+- The company repository has a `production-beta` Environment restricted to `main`. GitHub does not
+  offer required reviewers or wait timers for the current private-repository plan, so repository
+  write permission plus the manual repository-bound release workflow is the temporary human
+  authorization boundary. At least one Environment reviewer is added when the repository becomes
+  public or the plan is upgraded; this limitation does not authorize a Beta release before the
+  production login gate passes.
 - Push and pull-request checks remain read-only. Development and public Beta publication are both
   explicit manual workflows; a normal push must never publish a user-installable version.
 - Release workflows do not accept runtime environment, profile, endpoint, Marketplace name, or
@@ -159,6 +170,8 @@ owner of server-side conversation history.
 - Do not add Hosted MCP or MCP Tasks/MRTR as a dependency of the CLI public Beta.
 - Do not support domestic or runtime-selectable environments in the public Beta CLI.
 - Do not automatically capture raw Codex or Claude Code conversations in this repository.
+- Do not run Claude Code model-authentication or model-selection validation in the current dev.8
+  pre-production closure batch.
 - Do not rewrite the shared Codeup or personal GitHub history merely to remove Pilot ancestry.
 - Do not store credentials, personal account information, customer content, private service
   locations, or operational identifiers in historical prompt records.

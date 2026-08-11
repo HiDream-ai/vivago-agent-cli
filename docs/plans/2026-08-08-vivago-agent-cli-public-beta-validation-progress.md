@@ -1,25 +1,25 @@
 # VivagoAgent CLI 公开 Beta 验证进度（L0–L3）
 
-更新时间：2026-08-08
+更新时间：2026-08-11
 
 当前长期源码分支：`main`
 
-当前开发版本：`0.3.0-dev.5`
+当前开发版本：`0.3.0-dev.8`
 
 验证环境：海外测试环境（`profile=dev`、`environment=overseas-test`）
 
-当前可以确认：六平台构建、原生 CLI、Codex/Claude Code 插件生命周期和 ticket-only 在线业务验证已经跑通。L0 为 6/6，L1 为 6/6，L2 为 12/12，ticket-only L3 为 12/12。
+当前可以确认：`dev.8` 的六平台构建、原生 CLI 和 Codex/Claude Code 插件生命周期已经跑通；此前 ticket-only 在线业务验证仍为 12/12。macOS ARM64 还补齐了真实登录、刷新、退出、重登、Codex 自然语言选择 Skill，以及 CLI 项目在 Web 页面可见性。
 
-这还不是“完整公开 Beta 验收完成”。标准登录、Codex/Claude 模型主动选择 Skill、海外测试库中的 `source/platform` 持久化和 Web 页面可见性仍需单独验证。
+这还不是“完整公开 Beta 验收完成”。当前下一项外部阻断是生产 `/agent/login` 尚未部署；生产登录、生产受控 L3、仓库公开和 Beta 发布均未执行。本轮按用户决定不验证 Claude Code 模型主动选择 Skill。
 
 ## 当前进度总表
 
 | 层级 | 主要验证什么 | 当前结果 | 状态 | 关键证据 | 还缺什么 |
 | --- | --- | ---: | --- | --- | --- |
-| L0 | 六平台交叉编译、Marketplace 组装、checksum、环境地址扫描和静态门禁 | 6/6 | 已通过 | [Development CI #31198528727](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/31198528727)、[v0.3.0-dev.5](https://github.com/ChaoXia-Beginer/vivago-agent-cli/releases/tag/v0.3.0-dev.5) | 代码签名、公证和公司 GitHub 发布流程不属于本轮 L0 |
-| L1 | 在真实 OS/CPU Runner 上启动对应二进制，验证 launcher、`version` 和 `doctor` | 6/6 | 已通过 | [Development CI #31187868757](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/31187868757)；dev.5 的 L2 也再次启动了六平台二进制 | 专用 L1 报告的版本较早，当前 dev.5 由更强的 L2 结果补充证明 |
-| L2 | Codex/Claude Code 插件安装、发现、升级、回滚、再升级 | 12/12 | 已通过 | [Development Release #31198629029](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/31198629029)，12 份脱敏报告 | 不调用 Codex/Claude 模型，不证明模型会主动选 Skill |
-| L3 | 通过安装后的插件 CLI 调用真实 VivagoAgent Web API，验证任务、SSE、附件、产物、取消和历史 | 12/12 | 已通过（ticket-only 范围） | [Hosted L3 #31232383974](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/31232383974)，6 份双宿主脱敏报告 | 登录/刷新/退出重登未跑；模型调用、数据库落库和 Web UI 未直接验证 |
+| L0 | 六平台交叉编译、Marketplace 组装、checksum、环境地址扫描和静态门禁 | 6/6 | 已通过 | [Development Release #31484366464](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/31484366464)、[v0.3.0-dev.8](https://github.com/ChaoXia-Beginer/vivago-agent-cli/releases/tag/v0.3.0-dev.8) | 代码签名和公证不属于首个 Beta 阻断项 |
+| L1 | 在真实 OS/CPU Runner 上启动对应二进制，验证 launcher、`version` 和 `doctor` | 6/6 | 已通过 | dev.8 发布门禁的六平台原生报告 | 六个平台均为真实目标 Runner，不使用兼容层代替 |
+| L2 | Codex/Claude Code 插件安装、发现、升级、回滚、再升级 | 12/12 | 已通过 | [Development Release #31484366464](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/31484366464)，12 份脱敏报告 | 宿主模型主动选择 Skill 另行验证；本轮仅验证 Codex |
+| L3 | 通过安装后的插件 CLI 调用真实 VivagoAgent Web API，验证任务、SSE、附件、产物、取消和历史 | 12/12 | 已通过（ticket-only 范围） | [Hosted L3 #31232383974](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/31232383974)，6 份双宿主脱敏报告 | Hosted 矩阵不含登录和模型；dev.8 代表平台已补鉴权、Codex 与 Web，生产 L3 未跑 |
 
 这里的计数口径不同：L0/L1 按六个平台计数，L2/L3 按“六个平台 × 两个宿主”计数。
 
@@ -49,16 +49,32 @@
 
 | 项目 | 当前值 |
 | --- | --- |
-| 开发版本 | [`v0.3.0-dev.5`](https://github.com/ChaoXia-Beginer/vivago-agent-cli/releases/tag/v0.3.0-dev.5) |
-| Marketplace 源码 | `eb7fa926609d64c9647a3f0b3951b460c4e23b0d` |
+| 开发版本 | [`v0.3.0-dev.8`](https://github.com/ChaoXia-Beginer/vivago-agent-cli/releases/tag/v0.3.0-dev.8) |
+| Marketplace 源码 | `72fb98d5b3d88058033fc1b04d1a262866524468` |
 | L3 工作流源码 | `ce633432adf922e31deb28a6fa297ec0831fcc75` |
 | Codex CLI | `0.147.0` |
 | Claude Code | `2.1.220` |
 | API 目标 | `https://dev.vivago.ai`，编译期固定，不提供运行时 `--env` 切换 |
 | 请求归属 | `X-Source: cli`、`X-Client-Platform: web` |
-| 发布运行 | [Manual Development Release #31198629029](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/31198629029) |
+| 发布运行 | [Manual Development Release #31484366464](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/31484366464) |
 | 最终 L3 运行 | [Manual Hosted L3 #31232383974](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/31232383974) |
-| 最终文档前 CI | [Development CI #31233657351](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/31233657351) |
+| 个人 main 对齐后 CI | [Development CI #31485750215](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/31485750215) |
+| 公司 main Beta Check | [Beta Check #31483042861](https://github.com/HiDream-ai/vivago-agent-cli/actions/runs/31483042861) |
+
+## 2026-08-11 dev.8 发布前收口
+
+| 用例 | 结果 | 当前证据和边界 |
+| --- | --- | --- |
+| `auth refresh` | PASS | Keychain 刷新成功，随后仍为已登录且无需刷新；未输出凭据 |
+| `auth logout` | PASS | 退出后立即检查为未登录 |
+| 浏览器重新登录 | PASS | 通过海外测试 `/agent/login` 和 loopback 回调恢复 Keychain 登录态 |
+| Codex 自然语言选择 Skill | PASS | 全新 Codex 会话主动选择 `vivago-agent-cli`，依次执行诊断、鉴权、项目创建和单次文本任务，Turn 正常结束 |
+| Claude Code 自然语言选择 Skill | 本轮不验 | 插件包已升级到 dev.8；宿主模型账号失效后，用户明确将该项移出本轮验收范围，没有提交 VivagoAgent Turn |
+| CLI 项目在 Web 可见 | PASS | Web 页面展示同一项目标题、用户请求和 VivagoAgent 回复，证明复用服务端项目与会话历史 |
+| 公司 `production-beta` Environment | PASS（有限制） | 已创建并只允许公司 `main`；当前私有仓库套餐不支持 reviewer/wait timer，暂由仓库写权限与手动发布入口承担人工授权 |
+| 海外生产登录与 L3 | BLOCKED/ENV | 生产 `/agent/login` 尚未部署，本轮未调用生产业务 API、未发布 Beta |
+
+本轮在线用例严格使用 dev.8 编译期固定的海外测试环境。没有复用 App API、没有把测试凭据注入生产构建，也没有把项目、Conversation 或 Turn 标识写入仓库文档。
 
 ## L0：构建和发布产物
 
@@ -82,14 +98,14 @@ L0 先回答“六个平台的包能不能稳定构建出来”。它不依赖�
 | Go prod 测试 | PASS | `go test -tags prod ./...` |
 | Race | PASS | `go test -race ./...` |
 | Vet | PASS | `go vet ./...` |
-| Python 验证器测试 | 45/45 PASS | 包含 workflow、六平台、双宿主和 L3 报告契约 |
+| Python 验证器测试 | 114/114 PASS | 包含 Dev/Beta workflow、六平台、双宿主、供应链和 L3 报告契约 |
 | Codex 官方本地校验 | PASS | 插件 manifest 和目录结构有效 |
 | Claude 插件校验 | PASS | Claude Code 能识别插件结构 |
 | 六平台构建 | 6/6 PASS | darwin/linux/windows × arm64/amd64 |
 | Marketplace 和 checksum | PASS | 发布产物与 `BUILD_INFO.json` 一致 |
 | 环境地址扫描 | PASS | dev 包保持海外测试环境，不混入生产地址 |
 
-`v0.3.0-dev.5` Release 指向 `eb7fa92...`，包含一份完整开发 Marketplace；对应运行还上传了 12 份 L2 生命周期报告。
+`v0.3.0-dev.8` Release 指向 `72fb98d...`，包含一份完整开发 Marketplace；对应运行还上传了 12 份 L2 生命周期报告。
 
 ## L1：六平台原生 CLI
 
@@ -108,7 +124,7 @@ L1 重点是排除“交叉编译成功，但目标机器实际跑不起来”�
 
 - 专用 L1 运行： [Development CI #31187868757](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/31187868757)，6/6 PASS。
 - 专用 L1 报告基于较早的 `0.0.0-dev.8`，源码为 `8f4de330a914b58fe3183eefcaec5cff3f5c3fdc`。
-- 最新 `v0.3.0-dev.5` 又在 L2 的 12 个原生 Job 中调用了六个平台的 launcher 和 `doctor`，全部为 `doctor_exit=0`。因此当前二进制的原生启动不是只依赖旧版本报告。
+- 最新 `v0.3.0-dev.8` 又在 L2 的 12 个原生 Job 中调用了六个平台的 launcher 和 `doctor`，全部为 `doctor_exit=0`。因此当前二进制的原生启动不是只依赖旧版本报告。
 
 ## L2：两个宿主的安装、升级和回滚
 
@@ -118,10 +134,10 @@ L2 使用 Codex 和 Claude Code 的官方插件管理命令，不直接复制插
 
 | 阶段 | 插件版本 | 验证内容 |
 | --- | --- | --- |
-| 全新安装 | `0.3.0-dev.4` | 从开发 Marketplace 安装，定位宿主隔离目录中的 launcher，运行 `doctor` |
-| 升级 | `0.3.0-dev.5` | 更新 Marketplace 和插件，确认加载新版本 launcher |
-| 回滚 | `0.3.0-dev.4` | 回退到上一开发版本，确认旧版本仍可运行 |
-| 再升级 | `0.3.0-dev.5` | 再次升级并确认最终状态回到候选版本 |
+| 全新安装 | `0.3.0-dev.7` | 从开发 Marketplace 安装，定位宿主隔离目录中的 launcher，运行 `doctor` |
+| 升级 | `0.3.0-dev.8` | 更新 Marketplace 和插件，确认加载新版本 launcher |
+| 回滚 | `0.3.0-dev.7` | 回退到上一开发版本，确认旧版本仍可运行 |
+| 再升级 | `0.3.0-dev.8` | 再次升级并确认最终状态回到候选版本 |
 
 ### 当前结果
 
@@ -136,9 +152,9 @@ L2 使用 Codex 和 Claude Code 的官方插件管理命令，不直接复制插
 | 每份报告的四个阶段 | 全部 PASS |
 | `doctor_exit` | 全部为 `0` |
 | 报告环境 | `profile=dev`、`environment=overseas-test` |
-| 报告源码 | 全部为 `eb7fa926609d64c9647a3f0b3951b460c4e23b0d` |
+| 报告源码 | 全部为 `72fb98d5b3d88058033fc1b04d1a262866524468` |
 
-门禁通过后，流水线才创建 `v0.3.0-dev.5` Prerelease 并更新 `dev-marketplace`。如果任意一个平台或宿主失败，发布步骤不会执行。
+门禁通过后，流水线才创建 `v0.3.0-dev.8` Prerelease 并更新 `dev-marketplace`。如果任意一个平台或宿主失败，发布步骤不会执行。
 
 L2 不调用 Codex 或 Claude 模型。它证明的是官方插件命令能安装和维护插件，不证明模型拿到自然语言请求后会主动读取 Skill 并调用 `vivago-agent`。
 
@@ -241,13 +257,13 @@ L2 不调用 Codex 或 Claude 模型。它证明的是官方插件命令能安�
 | `X-Source` | VivagoAgent 请求日志 | `cli` |
 | `client_source` | VivagoAgent 结构化日志 | `cli` |
 | `X-Client-Platform` | VivagoAgent 请求日志 | `web` |
-| `X-Client-Version` | VivagoAgent 请求日志 | `0.3.0-dev.5` |
+| `X-Client-Version` | VivagoAgent 请求日志和 dev.8 本机验证 | `0.3.0-dev.5`（Hosted L3）/ `0.3.0-dev.8`（本机收口） |
 | Project 持久化 | 海外测试 Mongo | 未直接查询 |
 | Conversation 持久化 | 海外测试 Mongo | 未直接查询 |
 | Turn 持久化 | 海外测试 Mongo | 未直接查询 |
-| Web 页面可见 | 浏览器人工检查 | 未验证 |
+| Web 页面可见 | 浏览器人工检查 | PASS；CLI 创建的项目、请求和回复可见 |
 
-当前本机 Mongo 只读工具只配置了正式库，没有海外测试库目标。为了避免拿测试 ID 查询正式库或临时拼接数据库凭据，本轮没有直接读取海外测试 Mongo。日志可以证明请求归属已经识别，不能单独证明数据库字段已经落盘。
+当前本机 Mongo 只读工具只配置了正式库，没有海外测试库目标。为了避免拿测试 ID 查询正式库或临时拼接数据库凭据，本轮没有直接读取海外测试 Mongo。Web 可见性证明 Project、Conversation 和 Turn 由服务端持久化并可被 Web 复用，但不能代替对 `source` 字段值的数据库只读查询。服务端补齐 `Project / Conversation / Turn.source=cli` 及日志、监控、限流统计由服务端研发确认完成。
 
 ## 后续还需要做什么
 
@@ -255,35 +271,37 @@ L2 不调用 Codex 或 Claude 模型。它证明的是官方插件命令能安�
 
 | 优先级 | 工作 | 当前状态 | 预计工作量 | 前置依赖 | 验收标准 | 是否需要你介入 |
 | --- | --- | --- | ---: | --- | --- | --- |
-| P0 | 标准登录、刷新、退出重登 | 本轮 `NOT_RUN` | 代表平台 0.5–1 天；六平台完整覆盖 1–2 天 | 可操作浏览器、测试账号、必要时处理 MFA/验证码 | 首次未登录、登录成功、刷新、退出、重新登录均通过；不使用 App API 或 token 绕过 | 需要，在出现浏览器登录或验证码时介入 |
-| P0 | Codex/Claude 模型主动选择 Skill | 未验证 | 0.5 天 | 两个宿主各自可用账号 | 分别用自然语言发起一次任务，模型主动加载 Skill 并调用插件，不手工执行 launcher | 需要提供或登录两个宿主账号 |
-| P0 | `source/platform` 数据库持久化 | 只有日志证据 | 0.5 天 | 海外测试 Mongo 只读目标，或服务端研发提供查询结果 | 按 L3 报告 ID 核对 Project、Conversation、Turn 的 `source=cli`，涉及 `platform` 的表保持 `web` | 需要协调只读权限或服务端研发 |
-| P0 | Web 页面可见性 | 未验证 | 0.25 天 | 海外测试 Web 登录 | CLI 创建的项目、Conversation、任务历史和产物可以在 Web 中打开 | 需要登录 Web 时介入 |
-| P1 | 公司 GitHub Beta 流水线 | 未开始 | 2–3 天 | 公司仓库权限、License 决策、Tag/分支规则 | 公司 CI 用正式 profile 重建；生成 checksum、SBOM 和构建证明；只发布海外正式环境包 | 需要确认公司仓库和发布规则 |
-| P1 | 海外正式环境受控 Beta | 未开始 | 0.5–1 天 | 公司 GitHub Beta 包、海外正式测试账号 | 在正式环境完成安装、登录、文本任务、附件、SSE 和产物下载的受控 smoke | 需要确认正式测试账号和发布时间 |
+| P0 | 海外测试登录、刷新、退出重登 | macOS ARM64 PASS | 其余平台按风险决定是否扩展 | dev.8、海外测试账号 | 当前代表平台流程已闭环 | 当前无需介入 |
+| P0 | 宿主模型主动选择 Skill | Codex PASS；Claude Code 本轮移除 | Claude 后续如恢复范围约 0.25 天 | 可用宿主账号 | 自然语言触发、模型主动加载 Skill，不手工执行 launcher | 本轮不需要 |
+| P0 | `source/platform` 数据库持久化 | 服务端研发确认完成；日志与 Web 证据已具备，未直接查测试库字段 | 只读补证约 0.25 天，可后置 | 海外测试 Mongo 只读目标 | 精确核对三类对象的 `source=cli` | 需要协调只读权限时再介入 |
+| P0 | Web 页面可见性 | PASS | 已完成 | 海外测试 Web 登录 | CLI 项目、请求和回复可在 Web 打开 | 无 |
+| P1 | 公司 GitHub Beta 流水线 | 已完成 | 发布前只需复核真实运行参数 | 生产登录上线 | 公司 CI 使用 prod profile、checksum、SBOM、attestation，只允许公司 main 手动发布 | 发布时需要最终确认 |
+| P1 | `production-beta` 发布边界 | Environment 与 main 限制已完成；reviewer 受 GitHub 套餐限制 | 仓库公开或套餐升级后约 0.25 天补 reviewer | GitHub 计划支持 | Environment 至少一名 reviewer | 届时需要管理员配置/确认 |
+| P1 | 海外正式环境受控 Beta | BLOCKED/ENV | 入口上线后 0.5–1 天 | 生产 `/agent/login`、海外正式测试账号 | 完成首次登录、刷新、退出重登和代表平台 L3 | 登录或验证码时需要介入 |
 | P2 | macOS 公证、Windows 签名 | 未开始 | 2–5 天 | Apple Developer ID、Windows 代码签名证书 | 安装和首次运行不触发无法解释的 Gatekeeper/SmartScreen 风险 | 需要公司提供证书和签名主体 |
 
 如果只安排下一轮验证，建议顺序是：
 
-1. 先补海外测试 Mongo 的只读证据和 Web 页面可见性，这两项不需要重新跑六平台生成任务。
-2. 再用真实 Codex/Claude 账号各做一次模型主动调用。
-3. 登录流程有人能处理浏览器和验证码时再跑，先做代表平台，再决定是否扩到六平台。
-4. 上述 P0 完成后，再迁移到公司 GitHub，构建只连接海外正式环境的 Beta 包。
+1. 等待生产 `/agent/login` 上线。
+2. 使用公司生产 Beta 候选包从首次未登录开始验证登录、刷新、退出和重登。
+3. 再执行海外生产代表平台受控 L3 与回滚演练。
+4. 完成公司法务/治理确认、GitHub reviewer 能力确认后，单独审批仓库公开和 `v0.3.0-beta.1` 发布。
 
 ## 哪些结论可以对外说
 
 | 可以确认 | 暂时不能确认 |
 | --- | --- |
 | 六个平台都能构建并原生运行 CLI | 标准登录已经覆盖六个平台 |
-| Codex/Claude Code 都能安装、升级、回滚插件 | Codex/Claude 模型会主动选择 Skill |
-| ticket-only 在线任务在 12 个组合全部通过 | refresh token 和退出重登已经验证 |
+| Codex/Claude Code 都能安装、升级、回滚插件 | Claude Code 模型会主动选择 Skill（本轮明确未验） |
+| ticket-only 在线任务在 12 个组合全部通过 | 海外生产登录和业务 L3 已经验证 |
 | 文本、附件、SSE、图片产物、取消和历史已跑真实海外测试环境 | `source/platform` 已由本轮直接查询数据库证明 |
-| 一次性 ticket 已删除，Runner 和本机没有残留临时登录态 | Web 页面已经人工确认所有 CLI 项目可见 |
-| dev.5 Release 和报告可在个人 GitHub 追溯 | 公司 GitHub 和海外正式环境 Beta 已经发布 |
+| dev.8 在 macOS ARM64 的刷新、退出、重登和 Codex 自然语言调用通过 | `source=cli` 已由本轮直接查询测试数据库证明 |
+| CLI 创建的验证项目和对话可在海外测试 Web 页面打开 | 所有 CLI 项目和所有平台的 Web 可见性均已逐一验证 |
+| dev.8 Release、公司 Beta Check 和报告可追溯 | 公司 GitHub 或海外正式环境 Beta 已经发布 |
 
 当前准确说法是：
 
-> VivagoAgent CLI 的 L0、L1、L2 已完成，ticket-only L3 在六平台 × 两宿主上为 12/12；距离完整公开 Beta 验收还差标准登录、宿主模型主动调用、数据库持久化、Web 可见性，以及公司 GitHub/海外正式环境发布准备。
+> VivagoAgent CLI 的 Dev L0/L1/L2 已完成，ticket-only L3 在六平台 × 两宿主上为 12/12；dev.8 的代表平台登录闭环、Codex 自然语言调用和 Web 可见性也已通过。公司 Beta 构建与发布流水线已就绪但未发布，当前停在等待生产 `/agent/login` 上线。
 
 ## 相关提交
 
