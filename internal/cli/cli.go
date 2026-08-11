@@ -42,15 +42,14 @@ type AuthRuntime interface {
 }
 
 type Runtime struct {
-	Profile                string
-	WebBaseURL             string
-	Auth                   AuthRuntime
-	Projects               ProjectRuntime
-	Doctor                 DoctorRuntime
-	Agent                  AgentRuntime
-	Conversations          ConversationRuntime
-	Artifacts              ArtifactRuntime
-	AllowManualAuthRefresh bool
+	Profile       string
+	WebBaseURL    string
+	Auth          AuthRuntime
+	Projects      ProjectRuntime
+	Doctor        DoctorRuntime
+	Agent         AgentRuntime
+	Conversations ConversationRuntime
+	Artifacts     ArtifactRuntime
 }
 
 type AgentRuntime interface {
@@ -127,16 +126,6 @@ func RunContext(
 		}
 		writeEnvelope(stdout, envelope{OK: true, Data: report})
 		return 0
-	}
-	if len(args) >= 3 && args[0] == "--json" && args[1] == "auth" &&
-		args[2] == "refresh" && !runtime.AllowManualAuthRefresh {
-		writeEnvelope(stdout, envelope{
-			Error: map[string]string{
-				"code":    "COMMAND_UNAVAILABLE",
-				"message": "auth refresh is unavailable in this build",
-			},
-		})
-		return exitUsage
 	}
 	if len(args) >= 3 && args[0] == "--json" && args[1] == "artifact" {
 		switch args[2] {

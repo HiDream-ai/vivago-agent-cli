@@ -45,7 +45,10 @@ Codex / Claude Code
 | 公开 Beta 候选包 | 公司 GitHub，由公司 CI 重新构建 | 海外正式环境 | 发布前受控冒烟 |
 | 公开 Beta | 公司 GitHub Release 和 Marketplace | 海外正式环境 | 外部普通用户 |
 
-个人 GitHub 可以发布带 `dev` 标识的开发插件和预发布包，开发 Marketplace 使用 `vivago-dev` 等明显不同的名称，不能占用 `vivago` 正式名称，也不能生成对外 Beta Tag。待发布代码通过 PR、镜像同步或固定 commit 进入公司 GitHub，最终以公司仓库中经过评审的 commit 为准。
+个人 GitHub 可以发布带 `-dev.N` 版本的开发预发布包，开发 Marketplace 内部名称使用
+`vivago-dev`，不能占用 `vivago` 正式安装通道，也不能生成对外 Beta Tag。插件的显示名称、Skill、
+命令和功能不得带开发版差异。待发布代码通过 PR、镜像同步或固定 commit 进入公司 GitHub，最终以
+公司仓库中经过评审的 commit 为准。
 
 发布入口按仓库固定：个人 GitHub 的手动 Release Workflow 只接受 `v0.3.0-dev.N` 并更新
 `dev-marketplace`；公司 GitHub 的手动 Release Workflow 只接受 `v0.3.0-beta.N`，使用
@@ -594,6 +597,19 @@ Codex 插件清单配置 `composerIcon`、`logo`、`logoDark` 和品牌主色 `#
 `agents/openai.yaml` 同步配置大小图标和品牌色。Claude Code 清单只使用其官方支持的元数据字段，
 不为了显示 Logo 添加未知字段，但分发包仍包含完整素材。详细规范见
 [`2026-08-10-plugin-brand-assets-design.md`](2026-08-10-plugin-brand-assets-design.md)。
+
+两个源码 manifest 作为环境无关模板维护，模板版本为 `0.0.0`。Dev 与 Beta 组装脚本必须分别
+注入实际版本，并都将 Codex manifest、Codex Marketplace 和 Skill 元数据的显示名固定为
+`Vivago Agent CLI`；不使用显示名区分开发和正式通道。Claude manifest 除动态版本外保持模板
+原样。Beta 组装器和独立校验器必须同时检查两个 manifest 的版本，拒绝 manifest 名称、用户可见
+描述以及 Skill 指引中出现 `Dev`、`development` 或“开发”字样。组装时还要排除 `.DS_Store`、
+`__pycache__` 和 `.pyc` 等本机临时文件。
+
+个人 Dev 与公司 Beta 是同一产品的两个环境构建。除 API/Web/Login 地址、凭证/锁命名空间、
+`-dev.N`/`-beta.N` 版本、Marketplace 内部名称及构建审计元数据外，manifest、Skill、references、
+启动器、平台支持、CLI 命令、参数、JSON/JSONL 契约和运行时能力必须一致。不得通过 `prod` build
+tag 关闭 `auth refresh` 或增加其他功能开关。分发测试在归一化这些允许字段后逐文件比较两个插件
+包；profile 数据结构只保留环境名称和 API/Web/Login 地址，防止以后再次引入渠道专属能力。
 
 ## 开工和发布前还要确认什么
 

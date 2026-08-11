@@ -1,13 +1,13 @@
 {
   "name": "vivago-agent-cli",
-  "version": "0.3.0-dev.1",
+  "version": "0.0.0",
   "description": "Delegate creative and production tasks to VivagoAgent through a bundled cross-platform Go CLI without exposing internal business tools.",
   "author": {
     "name": "HiDream",
     "url": "https://vivago.ai"
   },
   "homepage": "https://vivago.ai",
-  "license": "Proprietary",
+  "license": "Apache-2.0",
   "keywords": [
     "vivago",
     "agent-to-agent",

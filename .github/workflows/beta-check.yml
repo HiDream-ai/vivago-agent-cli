@@ -324,8 +324,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "${HOST_ROOT}/previous-marketplace"
-          tar -xzf "${HOST_ROOT}/input/vivago-beta-previous.tar.gz" \
-            -C "${HOST_ROOT}/previous-marketplace"
+          python -m tarfile -e "${HOST_ROOT}/input/vivago-beta-previous.tar.gz" \
+            "${HOST_ROOT}/previous-marketplace"
           python scripts/verify_beta_host_plugin_lifecycle.py \
             --archive "${HOST_ROOT}/input/vivago-beta-${BETA_VERSION}-${GITHUB_SHA}.tar.gz" \
             --previous-marketplace "${HOST_ROOT}/previous-marketplace" \

@@ -321,6 +321,21 @@ class GitHubWorkflowContractTests(unittest.TestCase):
                             rf"(?s)- target: {re.escape(target)}\s+runner: {re.escape(runner)}\s+host: {re.escape(host)}",
                         )
 
+    def test_beta_host_lifecycle_extraction_is_windows_path_safe(self) -> None:
+        for workflow in ("beta-check.yml", "beta-release.yml"):
+            with self.subTest(workflow=workflow):
+                text = _workflow(workflow)
+                self.assertNotIn('tar -xzf "${HOST_ROOT}/input/', text)
+                self.assertIn(
+                    'python -m tarfile -e "${HOST_ROOT}/input/vivago-beta-previous.tar.gz"',
+                    text,
+                )
+
+    def test_release_workflows_use_one_cross_platform_archive_extractor(self) -> None:
+        for workflow in ("dev-release.yml", "beta-check.yml", "beta-release.yml"):
+            with self.subTest(workflow=workflow):
+                self.assertNotIn("tar -xzf", _workflow(workflow))
+
     def test_beta_release_is_manual_company_main_only_and_has_protected_publish(self) -> None:
         text = _workflow("beta-release.yml")
 

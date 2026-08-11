@@ -276,7 +276,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "${MARKETPLACE}"
-          tar -xzf "${ARCHIVE}" -C "${MARKETPLACE}"
+          python -m tarfile -e "${ARCHIVE}" "${MARKETPLACE}"
           python scripts/verify_dev_distribution.py \
             --marketplace "${MARKETPLACE}" \
             --version "${DEV_VERSION}" \

@@ -12,6 +12,7 @@ from pathlib import Path, PurePosixPath
 
 
 PLUGIN_NAME = "vivago-agent-cli"
+CODEX_DISPLAY_NAME = "Vivago Agent CLI"
 TARGETS = (
     "darwin-arm64",
     "darwin-amd64",
@@ -33,6 +34,15 @@ FORBIDDEN_MARKERS = (
     b"media.hidreamai.com",
     b"vivago-dev",
 )
+FORBIDDEN_MANIFEST_WORDING = re.compile(r"(?:\bdev\b|\bdevelopment\b|开发)", re.IGNORECASE)
+CODEX_BRAND_FIELDS = (
+    "name",
+    "description",
+    "interface.displayName",
+    "interface.shortDescription",
+    "interface.longDescription",
+)
+CLAUDE_BRAND_FIELDS = ("name", "description")
 
 
 def _arguments(argv: list[str] | None = None) -> argparse.Namespace:
@@ -56,6 +66,51 @@ def _json(path: Path) -> dict[str, object]:
     if not isinstance(payload, dict):
         raise ValueError(f"JSON document must be an object: {path}")
     return payload
+
+
+def _field_value(payload: dict[str, object], field: str) -> str:
+    value: object = payload
+    for part in field.split("."):
+        if not isinstance(value, dict) or part not in value:
+            raise ValueError(f"plugin manifest is missing branding field: {field}")
+        value = value[part]
+    if not isinstance(value, str):
+        raise ValueError(f"plugin manifest branding field must be a string: {field}")
+    return value
+
+
+def _verify_manifest_branding(
+    codex_manifest: dict[str, object], claude_manifest: dict[str, object]
+) -> None:
+    for manifest_name, payload, fields in (
+        ("Codex", codex_manifest, CODEX_BRAND_FIELDS),
+        ("Claude", claude_manifest, CLAUDE_BRAND_FIELDS),
+    ):
+        for field in fields:
+            if FORBIDDEN_MANIFEST_WORDING.search(_field_value(payload, field)):
+                raise ValueError(
+                    f"{manifest_name} plugin manifest contains development wording in {field}"
+                )
+    if _field_value(codex_manifest, "interface.displayName") != CODEX_DISPLAY_NAME:
+        raise ValueError(f"Codex plugin displayName must be {CODEX_DISPLAY_NAME!r}")
+
+
+def _verify_skill_guidance(plugin: Path) -> None:
+    skill_root = plugin / "skills" / PLUGIN_NAME
+    metadata = skill_root / "agents" / "openai.yaml"
+    expected_display_name = f'display_name: "{CODEX_DISPLAY_NAME}"'
+    metadata_lines = {
+        line.strip() for line in metadata.read_text(encoding="utf-8").splitlines()
+    }
+    if expected_display_name not in metadata_lines:
+        raise ValueError(f"Skill display_name must be {CODEX_DISPLAY_NAME!r}")
+    for path in skill_root.rglob("*"):
+        if path.is_file() and path.suffix.lower() in {".md", ".yaml", ".yml"}:
+            if FORBIDDEN_MANIFEST_WORDING.search(path.read_text(encoding="utf-8")):
+                raise ValueError(
+                    "skill guidance contains development wording: "
+                    f"{path.relative_to(plugin).as_posix()}"
+                )
 
 
 def _verify_checksums(plugin: Path) -> None:
@@ -106,14 +161,23 @@ def verify(args: argparse.Namespace) -> Path:
     if (plugin / "VERSION").read_text(encoding="utf-8").strip() != args.version:
         raise ValueError("VERSION does not match the requested Beta build")
 
-    for manifest in (
-        plugin / ".codex-plugin" / "plugin.json",
-        plugin / ".claude-plugin" / "plugin.json",
+    codex_manifest_path = plugin / ".codex-plugin" / "plugin.json"
+    claude_manifest_path = plugin / ".claude-plugin" / "plugin.json"
+    codex_manifest = _json(codex_manifest_path)
+    claude_manifest = _json(claude_manifest_path)
+    for manifest_path, manifest in (
+        (codex_manifest_path, codex_manifest),
+        (claude_manifest_path, claude_manifest),
     ):
-        if _json(manifest).get("version") != args.version:
-            raise ValueError(f"plugin manifest version mismatch: {manifest}")
-    if _json(marketplace / ".agents" / "plugins" / "marketplace.json").get("name") != "vivago":
+        if manifest.get("version") != args.version:
+            raise ValueError(f"plugin manifest version mismatch: {manifest_path}")
+    _verify_manifest_branding(codex_manifest, claude_manifest)
+    _verify_skill_guidance(plugin)
+    codex_marketplace = _json(marketplace / ".agents" / "plugins" / "marketplace.json")
+    if codex_marketplace.get("name") != "vivago":
         raise ValueError("Codex Marketplace must be named vivago")
+    if _field_value(codex_marketplace, "interface.displayName") != CODEX_DISPLAY_NAME:
+        raise ValueError(f"Codex Marketplace displayName must be {CODEX_DISPLAY_NAME!r}")
     if _json(marketplace / ".claude-plugin" / "marketplace.json").get("name") != "vivago":
         raise ValueError("Claude Marketplace must be named vivago")
 
