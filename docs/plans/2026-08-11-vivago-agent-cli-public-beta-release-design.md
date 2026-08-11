@@ -54,7 +54,7 @@ Tag 是 `v0.3.0-dev.7`、`v0.3.0-beta.1` 等，不存在名为 `N` 的分支或 
 | `Project`、`Conversation`、`Turn.source=cli` | 服务端已完成 |
 | `platform=web` 和 Web 可见性设计 | 已确定 |
 | 生产 `prod` profile | 已存在 |
-| 公司 GitHub 仓库和 Beta CI | Workflow 源码已实现；公司仓库和 Hosted Runner 尚未建立 |
+| 公司 GitHub 仓库和 Beta CI | 公司私有仓库和 Workflow 已建立；PR #1 的 Beta Check 全绿，六平台原生 6/6、双宿主生命周期 12/12 |
 | 生产 Beta 构建、组装和校验脚本 | 已实现并完成本地验证 |
 | 海外生产受控冒烟 | 未完成 |
 | 公开仓库治理和安全材料 | 核心仓库文件已完成；公司法定主体、产品政策入口和仓库规则待确认 |
@@ -241,6 +241,42 @@ Push 到公司仓库不会直接给外部用户发布。只有手动运行 `Publ
 | Dev | 默认构建 | `https://dev.vivago.ai` | `https://dev.vivago.ai/agent/login` | `vivago-dev` |
 | Beta | `-tags prod` | `https://vivago.ai` | `https://vivago.ai/agent/login` | `vivago` |
 
+这里的隔离只用于防止测试流量进入生产、生产流量进入测试，不用于制造两套产品。个人 Dev 包与
+公司 Beta 包遵守同一份产品契约：命令、参数、返回结构、Skill、references、启动器、支持平台、
+宿主交互、登录/刷新/退出能力、名称和描述完全一致。包括 `auth refresh` 在内的命令不能按 profile
+增删；编译 profile 只允许提供环境身份。
+
+允许不同的字段只有：
+
+| 类别 | Dev | Beta | 原因 |
+|---|---|---|---|
+| API、Web、登录地址 | 海外测试 | 海外生产 | 唯一产品环境差异 |
+| 凭证和锁命名空间 | `dev` | `prod` | 防止跨环境复用凭证 |
+| 版本后缀 | `-dev.N` | `-beta.N` | 安装、升级和回滚识别 |
+| Marketplace 内部名称 | `vivago-dev` | `vivago` | 防止两个安装通道冲突 |
+| 构建来源元数据 | `channel=dev/profile=dev` | `channel=beta/profile=prod` | 审计和环境门禁 |
+| Release 治理附件 | 开发通道按需保留 | Beta 强制 SBOM/attestation | 发布治理，不改变插件功能 |
+
+除上表外，不接受任何用户可见或运行时能力差异。自动化测试会同时组装 Dev/Beta 包，归一化上述
+允许字段后逐文件比较 manifest、Skill、references、启动器、素材和法律文件；Go profile 的结构
+也只允许保留环境名称和三个地址字段。
+
+插件源码中的 Codex 和 Claude manifest 是环境无关模板，模板版本统一为 `0.0.0`。Codex
+`interface.displayName`、Codex Marketplace 的 `interface.displayName`，以及 Skill 的
+`agents/openai.yaml` 显示名，在源码、Dev 包和 Beta 包中均统一为 `Vivago Agent CLI`；Dev/Beta
+的差异不再通过显示名表达，而由版本、Marketplace 内部名称、编译 profile 和服务地址表达。
+
+两个组装器都必须显式覆盖两个 manifest 的版本，并显式写入 Codex 显示名，不能依赖模板当时
+恰好具有正确值。Claude manifest 除动态版本外保持模板原样。Beta 组装和独立校验还必须确认：
+
+- Codex 与 Claude manifest 的版本都精确等于本次 `X.Y.Z-beta.N`；
+- Codex 的 `name`、顶层 `description`、`displayName`、短描述和长描述不含 `Dev`、
+  `development` 或“开发”字样；
+- Claude 的 `name` 和 `description` 不含上述开发字样；
+- Codex `displayName` 精确为 `Vivago Agent CLI`。
+- Skill 元数据的显示名精确为 `Vivago Agent CLI`，Skill 和 references 不含开发通道文案；
+- 组装时忽略 `.DS_Store`、`__pycache__` 和 `.pyc` 等本机或解释器临时文件。
+
 Beta 增加独立入口，不把现有 Dev 脚本改成一个接收 `--profile` 的万能脚本：
 
 ```text
@@ -259,10 +295,14 @@ verify_beta_distribution.py
 - 六个二进制都使用 `prod` profile；
 - 版本包含 `-beta.`，channel 为 `beta`；
 - Marketplace 名称是 `vivago`；
+- 两个插件 manifest 的版本均为本次 Beta，Codex、Marketplace 和 Skill 显示名均为
+  `Vivago Agent CLI`；
+- 两个插件 manifest 的名称和用户可见描述不含开发版字样；
 - 包内不存在 `dev.vivago.ai`、国内环境地址和 `vivago-dev`；
 - Skill 文档不包含测试环境链接；
 - 项目 `deep_link` 由编译时 `WebBaseURL` 生成；
 - 个人和正式凭证使用不同的系统凭证条目。
+- Dev/Beta 产物归一化允许字段后完全一致，两个 profile 不存在功能开关。
 
 ## 登录和凭证
 

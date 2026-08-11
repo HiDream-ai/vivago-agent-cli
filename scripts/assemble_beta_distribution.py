@@ -15,6 +15,7 @@ from typing import Any
 
 PLUGIN_NAME = "vivago-agent-cli"
 MARKETPLACE_NAME = "vivago"
+CODEX_DISPLAY_NAME = "Vivago Agent CLI"
 TARGETS = (
     "darwin-arm64",
     "darwin-amd64",
@@ -35,6 +36,15 @@ FORBIDDEN_MARKERS = (
     b"domestic-prod",
     b"vivago-dev",
 )
+FORBIDDEN_MANIFEST_WORDING = re.compile(r"(?:\bdev\b|\bdevelopment\b|开发)", re.IGNORECASE)
+CODEX_BRAND_FIELDS = (
+    "name",
+    "description",
+    "interface.displayName",
+    "interface.shortDescription",
+    "interface.longDescription",
+)
+CLAUDE_BRAND_FIELDS = ("name", "description")
 
 
 def _arguments(argv: list[str] | None = None) -> argparse.Namespace:
@@ -64,6 +74,61 @@ def _set_manifest_version(path: Path, version: str) -> None:
     payload = json.loads(path.read_text(encoding="utf-8"))
     payload["version"] = version
     _write_json(path, payload)
+
+
+def _set_codex_manifest(path: Path, version: str) -> None:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    interface = payload.get("interface")
+    if not isinstance(interface, dict):
+        raise ValueError("Codex plugin manifest must contain an interface object")
+    payload["version"] = version
+    interface["displayName"] = CODEX_DISPLAY_NAME
+    _write_json(path, payload)
+
+
+def _field_value(payload: dict[str, Any], field: str) -> str:
+    value: Any = payload
+    for part in field.split("."):
+        if not isinstance(value, dict) or part not in value:
+            raise ValueError(f"plugin manifest is missing branding field: {field}")
+        value = value[part]
+    if not isinstance(value, str):
+        raise ValueError(f"plugin manifest branding field must be a string: {field}")
+    return value
+
+
+def _validate_beta_manifest_branding(
+    codex_manifest: dict[str, Any], claude_manifest: dict[str, Any]
+) -> None:
+    for manifest_name, payload, fields in (
+        ("Codex", codex_manifest, CODEX_BRAND_FIELDS),
+        ("Claude", claude_manifest, CLAUDE_BRAND_FIELDS),
+    ):
+        for field in fields:
+            if FORBIDDEN_MANIFEST_WORDING.search(_field_value(payload, field)):
+                raise ValueError(
+                    f"{manifest_name} plugin manifest contains development wording in {field}"
+                )
+    if _field_value(codex_manifest, "interface.displayName") != CODEX_DISPLAY_NAME:
+        raise ValueError(f"Codex plugin displayName must be {CODEX_DISPLAY_NAME!r}")
+
+
+def _validate_beta_skill_guidance(plugin: Path) -> None:
+    skill_root = plugin / "skills" / PLUGIN_NAME
+    metadata = skill_root / "agents" / "openai.yaml"
+    expected_display_name = f'display_name: "{CODEX_DISPLAY_NAME}"'
+    metadata_lines = {
+        line.strip() for line in metadata.read_text(encoding="utf-8").splitlines()
+    }
+    if expected_display_name not in metadata_lines:
+        raise ValueError(f"Skill display_name must be {CODEX_DISPLAY_NAME!r}")
+    for path in skill_root.rglob("*"):
+        if path.is_file() and path.suffix.lower() in {".md", ".yaml", ".yml"}:
+            if FORBIDDEN_MANIFEST_WORDING.search(path.read_text(encoding="utf-8")):
+                raise ValueError(
+                    "skill guidance contains development wording: "
+                    f"{path.relative_to(plugin).as_posix()}"
+                )
 
 
 def _target_binary(binary_root: Path, target: str) -> Path:
@@ -169,7 +234,11 @@ def assemble(args: argparse.Namespace) -> Path:
     plugin = args.output / "plugins" / PLUGIN_NAME
     try:
         plugin.parent.mkdir(parents=True)
-        shutil.copytree(args.plugin_template, plugin)
+        shutil.copytree(
+            args.plugin_template,
+            plugin,
+            ignore=shutil.ignore_patterns(".DS_Store", "__pycache__", "*.pyc"),
+        )
         for name in LEGAL_FILES:
             shutil.copy2(legal_root / name, plugin / name)
         for target, source in binaries.items():
@@ -187,8 +256,15 @@ def assemble(args: argparse.Namespace) -> Path:
             _windows_launcher(), encoding="utf-8", newline="\r\n"
         )
 
-        _set_manifest_version(plugin / ".codex-plugin" / "plugin.json", args.version)
-        _set_manifest_version(plugin / ".claude-plugin" / "plugin.json", args.version)
+        codex_manifest_path = plugin / ".codex-plugin" / "plugin.json"
+        claude_manifest_path = plugin / ".claude-plugin" / "plugin.json"
+        _set_codex_manifest(codex_manifest_path, args.version)
+        _set_manifest_version(claude_manifest_path, args.version)
+        _validate_beta_manifest_branding(
+            json.loads(codex_manifest_path.read_text(encoding="utf-8")),
+            json.loads(claude_manifest_path.read_text(encoding="utf-8")),
+        )
+        _validate_beta_skill_guidance(plugin)
         (plugin / "VERSION").write_text(args.version + "\n", encoding="utf-8")
         _write_json(
             plugin / "BUILD_INFO.json",
@@ -218,7 +294,7 @@ def assemble(args: argparse.Namespace) -> Path:
             args.output / ".agents" / "plugins" / "marketplace.json",
             {
                 "name": MARKETPLACE_NAME,
-                "interface": {"displayName": "Vivago"},
+                "interface": {"displayName": CODEX_DISPLAY_NAME},
                 "plugins": [
                     {
                         "name": PLUGIN_NAME,

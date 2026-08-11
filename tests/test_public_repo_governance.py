@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import unittest
 from pathlib import Path
 
@@ -34,6 +35,12 @@ class PublicRepositoryGovernanceTests(unittest.TestCase):
 
         self.assertIn("Apache License\n                           Version 2.0, January 2004", repository_license)
         self.assertIn("END OF TERMS AND CONDITIONS", repository_license)
+        for relative in (
+            "plugin/.codex-plugin/plugin.json",
+            "plugin/.claude-plugin/plugin.json",
+        ):
+            manifest = json.loads((REPO_ROOT / relative).read_text(encoding="utf-8"))
+            self.assertEqual(manifest["license"], "Apache-2.0", relative)
 
     def test_notice_is_packaged_and_has_no_legal_placeholder(self) -> None:
         notice = (REPO_ROOT / "NOTICE").read_text(encoding="utf-8")
@@ -66,6 +73,26 @@ class PublicRepositoryGovernanceTests(unittest.TestCase):
         self.assertIn("public Beta", security)
         self.assertNotIn("example.com", security)
         self.assertEqual(codeowners.strip(), "* @ChaoXia-Beginer")
+
+    def test_public_install_docs_lead_with_company_beta_channel(self) -> None:
+        readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+        install_guide = (
+            REPO_ROOT / "docs" / "vivago-agent-plugin-product-install-guide.md"
+        ).read_text(encoding="utf-8")
+        company_repository = "https://github.com/HiDream-ai/vivago-agent-cli.git"
+
+        self.assertIn("## 安装公开 Beta", readme)
+        for document in (readme, install_guide):
+            self.assertIn(company_repository, document)
+            self.assertIn("vivago-agent-cli@vivago", document)
+            self.assertIn("marketplace upgrade vivago", document)
+            self.assertIn("marketplace update vivago", document)
+        for document in (readme, install_guide):
+            self.assertNotIn("ChaoXia-Beginer/vivago-agent-cli", document)
+            self.assertNotIn("vivago-agent-cli@vivago-dev", document)
+            self.assertNotIn("## 维护者：安装 Dev 包", document)
+        self.assertIn("codex plugin remove vivago-agent-cli@vivago", install_guide)
+        self.assertIn("claude plugin uninstall vivago-agent-cli@vivago", install_guide)
 
 
 if __name__ == "__main__":

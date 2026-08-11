@@ -19,7 +19,4 @@ func TestProductionBuildUsesOnlyOverseasProductionEndpoints(t *testing.T) {
 	if profile.WebBaseURL != "https://vivago.ai" {
 		t.Fatalf("web base URL = %q", profile.WebBaseURL)
 	}
-	if profile.AllowManualAuthRefresh {
-		t.Fatal("manual auth refresh must be unavailable in prod builds")
-	}
 }

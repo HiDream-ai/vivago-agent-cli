@@ -143,7 +143,7 @@ func TestAuthRefreshJSONUsesRuntimeWithoutExposingCredentials(t *testing.T) {
 		&stdout,
 		&bytes.Buffer{},
 		BuildInfo{Version: "0.3.0-dev"},
-		Runtime{Auth: runtime, AllowManualAuthRefresh: true},
+		Runtime{Auth: runtime},
 	)
 
 	if exitCode != 0 {
@@ -160,30 +160,6 @@ func TestAuthRefreshJSONUsesRuntimeWithoutExposingCredentials(t *testing.T) {
 	}
 }
 
-func TestAuthRefreshIsUnavailableWithoutCallingRuntimeInProduction(t *testing.T) {
-	runtime := &fakeAuthRuntime{}
-	var stdout bytes.Buffer
-
-	exitCode := RunContext(
-		context.Background(),
-		[]string{"--json", "auth", "refresh"},
-		&stdout,
-		&bytes.Buffer{},
-		BuildInfo{Version: "0.3.0"},
-		Runtime{Auth: runtime, AllowManualAuthRefresh: false},
-	)
-
-	if exitCode != exitUsage {
-		t.Fatalf("exit code = %d, want %d", exitCode, exitUsage)
-	}
-	if runtime.refreshCalls != 0 {
-		t.Fatalf("refresh calls = %d, want 0", runtime.refreshCalls)
-	}
-	if !strings.Contains(stdout.String(), `"code":"COMMAND_UNAVAILABLE"`) {
-		t.Fatalf("stdout = %s", stdout.String())
-	}
-}
-
 func TestAuthRefreshMapsMissingCredentialsWithoutExposingRuntimeError(t *testing.T) {
 	runtime := &fakeAuthRuntime{refreshErr: auth.ErrLoginRequired}
 	var stdout bytes.Buffer
@@ -194,7 +170,7 @@ func TestAuthRefreshMapsMissingCredentialsWithoutExposingRuntimeError(t *testing
 		&stdout,
 		&bytes.Buffer{},
 		BuildInfo{Version: "0.3.0-dev"},
-		Runtime{Auth: runtime, AllowManualAuthRefresh: true},
+		Runtime{Auth: runtime},
 	)
 
 	if exitCode != exitAuth {

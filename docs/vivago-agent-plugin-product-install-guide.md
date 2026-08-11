@@ -1,61 +1,45 @@
 # VivagoAgent 插件安装和升级说明
 
-当前提供的是内部开发版本，供产品和研发在 Codex、Claude Code 中体验 VivagoAgent。插件已经内置
-macOS、Windows、Linux 的 ARM64/x64 二进制，不需要另外安装 Go、Python、`vivago-agent` 或
-`vivago-client`。
-
-当前可安装版本：`0.3.0-dev.6`。
-
-> 这个版本连接 Vivago 海外测试环境，只用于内部体验。请不要提交客户素材、未公开业务数据、账号凭证
-> 或其他敏感内容。后续面向外部用户的版本会迁移到公司 GitHub，并重新构建为海外正式环境版本。
+VivagoAgent 插件支持 Codex 和 Claude Code，安装包内置 macOS、Windows、Linux 的 ARM64/x64
+二进制。普通用户不需要安装 Go、Python、`vivago-agent` 或 `vivago-client`。公开 Beta 固定访问
+Vivago 海外正式环境，不提供环境切换，也不调用 App API。
 
 ## 安装前准备
 
-安装前确认以下几项：
-
 - 已安装 Codex 或 Claude Code；
-- 使用受支持的系统：macOS、Windows 或 Linux，ARM64/x64 均可；
-- GitHub 账号已经获得私有仓库 `ChaoXia-Beginer/vivago-agent-cli` 的只读权限，并接受仓库邀请；
-- 本机 Git 能正常访问这个私有仓库；
-- 有可用的 Vivago 海外测试环境账号。
+- 使用 macOS、Windows 或 Linux 的本地桌面环境；
+- 本机有可用的默认浏览器；
+- 有可登录 Vivago 海外正式环境的账号。
 
-不需要把 GitHub 密码、PAT、Vivago ticket 或 refresh token 发给任何人。遇到权限问题时，只需提供
-GitHub 用户名，由仓库管理员补充只读权限。
+GitHub 仓库公开后可以直接安装，不需要提交 GitHub PAT。Vivago 登录也不会要求用户把 ticket、
+refresh token、Cookie 或验证码复制给 Codex、Claude Code 或其他人。
 
-## 使用 Codex 安装
-
-在终端依次执行：
+## Codex 安装
 
 ```bash
 codex plugin marketplace add \
-  https://github.com/ChaoXia-Beginer/vivago-agent-cli.git \
-  --ref dev-marketplace
+  https://github.com/HiDream-ai/vivago-agent-cli.git \
+  --ref marketplace
 
-codex plugin add vivago-agent-cli@vivago-dev
+codex plugin add vivago-agent-cli@vivago
 ```
 
-安装完成后，重新打开 Codex 或新建一个任务。
-
-查看安装状态和版本：
+安装完成后重新打开 Codex 或新建一个任务。查看安装状态：
 
 ```bash
 codex plugin list --json
 ```
 
-## 使用 Claude Code 安装
-
-在终端依次执行：
+## Claude Code 安装
 
 ```bash
 claude plugin marketplace add \
-  'https://github.com/ChaoXia-Beginer/vivago-agent-cli.git#dev-marketplace'
+  'https://github.com/HiDream-ai/vivago-agent-cli.git#marketplace'
 
-claude plugin install vivago-agent-cli@vivago-dev --scope user
+claude plugin install vivago-agent-cli@vivago --scope user
 ```
 
-安装完成后，重新打开 Claude Code。
-
-查看安装状态和版本：
+安装完成后重新打开 Claude Code。查看安装状态：
 
 ```bash
 claude plugin list --json
@@ -63,106 +47,144 @@ claude plugin list --json
 
 ## 第一次怎么用
 
-安装后直接在 Codex 或 Claude Code 中用自然语言发起任务，不需要手动调用 CLI。例如：
+安装后直接用自然语言说明要交给 VivagoAgent 的完整任务。例如：
 
 ```text
 请使用 VivagoAgent 为一个高端咖啡品牌整理三组海报创意方向。
 ```
 
-第一次调用时，系统会打开 Vivago 登录页面。正常登录后，凭证保存在当前用户的系统凭证库中；插件
-不会要求你复制或粘贴 token。登录完成后回到 Codex 或 Claude Code，原任务会继续执行。
+第一次调用会打开 Vivago 登录页面。用户在网页中正常登录后，凭证保存在当前操作系统的凭证库中，
+原任务会继续执行。不要把登录结果或任何凭证复制回聊天。
 
-可以用下面的请求验证联网图片搜索：
+需要联网寻找图片或视觉参考时要明确说明：
 
 ```text
 请使用 VivagoAgent 联网搜索适合高端咖啡海报的视觉参考，并总结构图、色彩和适用场景。
 ```
 
-也可以验证图片生成：
+图片任务通常约一分钟；视频任务一般需要 15～40 分钟并消耗更多额度。长任务可以关闭当前流式连接
+后恢复，不要重复提交同一请求。
 
-```text
-请使用 VivagoAgent 生成一张可爱的小猫图片。
-```
+## 升级
 
-图片任务一般需要约一分钟，视频任务通常需要 15～40 分钟并消耗更多额度。测试安装时优先使用创意
-方案或联网视觉参考任务，不需要一开始就生成视频。
+新 Beta 发布后，先刷新 Marketplace，再刷新插件。
 
-## 有新版本时怎么升级
-
-仓库管理员发布新版本后，产品不需要重新接受 GitHub 邀请，也不需要重新登录 Vivago。
-
-Codex 执行：
+Codex：
 
 ```bash
-codex plugin marketplace upgrade vivago-dev
-codex plugin add vivago-agent-cli@vivago-dev
+codex plugin marketplace upgrade vivago
+codex plugin add vivago-agent-cli@vivago
 ```
 
-Claude Code 执行：
+Claude Code：
 
 ```bash
-claude plugin marketplace update vivago-dev
-claude plugin update vivago-agent-cli@vivago-dev --scope user
+claude plugin marketplace update vivago
+claude plugin update vivago-agent-cli@vivago --scope user
 ```
 
-升级后重启对应应用，再通过 `plugin list --json` 查看版本。Vivago 登录凭证保存在独立的系统凭证库
-中，正常安装和升级不会删除登录态，也不会影响 VivagoAgent 服务端已有的项目、会话和历史。
+升级后完全重启对应应用，再通过 `plugin list --json` 查看版本。正常升级不会删除 Vivago 登录态，
+也不会影响 VivagoAgent 服务端已有的项目、会话和历史。
+
+## 回滚到指定 Beta
+
+每个 GitHub Release 都提供 `vivago-beta-marketplace.tar.gz`、包内文件的 `SHA256SUMS`、SBOM 和
+GitHub 构建证明。先从目标版本的 Release 页面下载并核对构建证明与校验和，再把压缩包解压到独立
+目录。下面命令中的 `N` 要替换成实际版本数字，也可以使用 GitHub CLI 下载：
+
+```bash
+mkdir -p /absolute/path/vivago-beta-rollback/marketplace
+gh release download v0.3.0-beta.N \
+  --repo HiDream-ai/vivago-agent-cli \
+  --pattern vivago-beta-marketplace.tar.gz \
+  --dir /absolute/path/vivago-beta-rollback
+tar -xzf /absolute/path/vivago-beta-rollback/vivago-beta-marketplace.tar.gz \
+  -C /absolute/path/vivago-beta-rollback/marketplace
+```
+
+Codex 切换到本地版本：
+
+```bash
+codex plugin marketplace remove vivago
+codex plugin marketplace add /absolute/path/vivago-beta-rollback/marketplace
+codex plugin add vivago-agent-cli@vivago
+```
+
+Claude Code 切换到本地版本：
+
+```bash
+claude plugin marketplace remove vivago
+claude plugin marketplace add /absolute/path/vivago-beta-rollback/marketplace --scope user
+claude plugin update vivago-agent-cli@vivago --scope user
+```
+
+回到最新 Beta 时，移除本地 Marketplace，再按本文开头的公司 GitHub 地址重新添加并升级。回滚只
+替换本地插件代码，不删除服务端项目、会话和历史。
+
+## 卸载
+
+Codex：
+
+```bash
+codex plugin remove vivago-agent-cli@vivago
+codex plugin marketplace remove vivago
+```
+
+Claude Code：
+
+```bash
+claude plugin uninstall vivago-agent-cli@vivago --scope user
+claude plugin marketplace remove vivago
+```
+
+如果还要清除 Vivago 登录态，请在卸载前让插件执行退出登录。仅卸载插件不等于注销 Vivago 账号。
 
 ## 常见问题
 
-### 提示仓库不存在或没有权限
+### 提示仓库或 Marketplace 不存在
 
-先确认 GitHub 已登录、仓库邀请已经接受，并在浏览器中能够打开：
-
-```text
-https://github.com/ChaoXia-Beginer/vivago-agent-cli
-```
-
-如果浏览器能打开但命令仍然失败，检查本机 Git 是否能读取该私有仓库。不要通过聊天发送 PAT、密码或
-验证码。
+确认公司仓库已经公开，并且 `marketplace` 分支和至少一个 Beta Release 已发布。不要改用其他测试
+Marketplace 代替生产包。
 
 ### 提示 Marketplace 已存在
 
-说明之前已经添加过，不需要重复添加。Codex 执行：
+说明已经添加过，不需要重复添加。Codex 执行：
 
 ```bash
-codex plugin marketplace upgrade vivago-dev
+codex plugin marketplace upgrade vivago
+codex plugin add vivago-agent-cli@vivago
 ```
 
 Claude Code 执行：
 
 ```bash
-claude plugin marketplace update vivago-dev
+claude plugin marketplace update vivago
+claude plugin update vivago-agent-cli@vivago --scope user
 ```
 
-随后执行对应的插件安装或升级命令。
+### 安装后没有调用 VivagoAgent
 
-### 安装后自然语言请求没有调用 VivagoAgent
-
-先重启 Codex 或 Claude Code，并明确写出“请使用 VivagoAgent”。然后使用 `plugin list --json` 确认
-`vivago-agent-cli@vivago-dev` 已安装。如果插件已安装但仍未调用，请记录宿主、版本、操作系统、发生
-时间和界面错误信息后反馈。
+完全重启 Codex 或 Claude Code，并在请求中明确写“请使用 VivagoAgent”。然后使用
+`plugin list --json` 确认 `vivago-agent-cli@vivago` 已安装。
 
 ### 登录页面没有打开
 
-插件登录需要本机默认浏览器以及 loopback 回调。远程容器、纯命令行服务器或禁用浏览器的环境无法
-完成首次登录。请在本地桌面环境重试。
+首次登录需要本机默认浏览器和 loopback 回调。远程容器、纯命令行服务器或禁止打开浏览器的环境
+不能完成登录，请改用本地桌面环境。不要用手工复制 token 或直接调用业务 API 的方式绕过登录。
 
 ### 升级后仍显示旧版本
 
-先更新 Marketplace，再执行插件升级，并完全重启 Codex 或 Claude Code。如果仍然显示旧版本，反馈
-`plugin list --json` 中的插件版本即可，不要附带凭证、Cookie、Authorization Header 或完整任务内容。
+先更新 Marketplace，再更新插件并完全重启宿主。仍未生效时，只需反馈 `plugin list --json` 中的
+宿主、插件版本、操作系统和 CPU 架构，不要附带凭证或完整任务内容。
 
 ## 反馈问题时提供什么
 
-反馈时请提供：
-
-- 使用的是 Codex 还是 Claude Code；
+- Codex 或 Claude Code 及其版本；
 - 操作系统和 CPU 架构；
 - `plugin list --json` 显示的插件版本；
-- 出现问题的大致时间；
-- 执行到安装、登录、任务提交、进度恢复还是结果展示哪一步；
-- 界面上可见的错误信息。
+- 问题发生的大致时间；
+- 出现在安装、登录、任务提交、恢复还是结果展示阶段；
+- 界面中可见的错误信息。
 
-不要发送 GitHub PAT、Vivago ticket、refresh token、Cookie、Authorization Header、预签名 URL、客户
-素材或敏感任务内容。
+不要发送 GitHub PAT、Vivago ticket、refresh token、Cookie、Authorization Header、预签名 URL、
+客户素材或敏感任务内容。安全问题请按仓库的 [Security Policy](../SECURITY.md) 私密提交。

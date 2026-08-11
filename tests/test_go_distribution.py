@@ -62,6 +62,7 @@ class GoDistributionTests(unittest.TestCase):
 
             self.assertEqual(result.returncode, 0, result.stderr)
             plugin = output / "plugins" / "vivago-agent-cli"
+            self.assertFalse(any(plugin.rglob(".DS_Store")))
             for target in TARGETS:
                 binary_name = "vivago-agent.exe" if target.startswith("windows-") else "vivago-agent"
                 bundled = plugin / "bin" / target / binary_name
@@ -85,8 +86,25 @@ class GoDistributionTests(unittest.TestCase):
             claude_manifest = json.loads(
                 (plugin / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8")
             )
+            source_claude_manifest = json.loads(
+                (PLUGIN_TEMPLATE / ".claude-plugin" / "plugin.json").read_text(
+                    encoding="utf-8"
+                )
+            )
             self.assertEqual(codex_manifest["version"], "0.3.0-dev.1")
+            self.assertEqual(
+                codex_manifest["interface"]["displayName"],
+                "Vivago Agent CLI",
+            )
             self.assertEqual(claude_manifest["version"], "0.3.0-dev.1")
+            self.assertEqual(
+                {key: value for key, value in claude_manifest.items() if key != "version"},
+                {
+                    key: value
+                    for key, value in source_claude_manifest.items()
+                    if key != "version"
+                },
+            )
             assets = plugin / "assets"
             for name in (
                 "vivago-agent-logo.svg",
@@ -119,6 +137,10 @@ class GoDistributionTests(unittest.TestCase):
                 (output / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8")
             )
             self.assertEqual(codex_marketplace["name"], "vivago-dev")
+            self.assertEqual(
+                codex_marketplace["interface"]["displayName"],
+                "Vivago Agent CLI",
+            )
             self.assertEqual(codex_marketplace["plugins"][0]["policy"]["authentication"], "ON_USE")
             self.assertEqual(claude_marketplace["name"], "vivago-dev")
             self.assertEqual(

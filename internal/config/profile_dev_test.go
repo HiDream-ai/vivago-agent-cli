@@ -19,7 +19,4 @@ func TestDefaultBuildUsesOverseasDevelopmentEndpoints(t *testing.T) {
 	if profile.WebBaseURL != "https://dev.vivago.ai" {
 		t.Fatalf("web base URL = %q", profile.WebBaseURL)
 	}
-	if !profile.AllowManualAuthRefresh {
-		t.Fatal("manual auth refresh must be available in dev builds")
-	}
 }

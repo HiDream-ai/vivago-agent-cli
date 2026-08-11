@@ -1,13 +1,13 @@
 {
   "name": "vivago-agent-cli",
-  "version": "0.3.0-dev.1",
+  "version": "0.0.0",
   "description": "Delegate creative and production tasks from Codex to VivagoAgent through a bundled cross-platform Go CLI without exposing internal business tools.",
   "author": {
     "name": "HiDream",
     "url": "https://vivago.ai"
   },
   "homepage": "https://vivago.ai",
-  "license": "Proprietary",
+  "license": "Apache-2.0",
   "keywords": [
     "vivago",
     "agent-to-agent",
@@ -17,7 +17,7 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "Vivago Agent CLI Dev",
+    "displayName": "Vivago Agent CLI",
     "shortDescription": "Delegate creative tasks to VivagoAgent",
     "longDescription": "A cross-host Agent-to-Agent plugin that lets Codex delegate coarse-grained creative and production work to VivagoAgent through a bundled cross-platform Go CLI. VivagoAgent owns conversation history and internal tool execution.",
     "developerName": "HiDream",

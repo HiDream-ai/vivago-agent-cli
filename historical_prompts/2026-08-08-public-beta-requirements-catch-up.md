@@ -131,6 +131,26 @@ owner of server-side conversation history.
   that the CLI callback contract failed. Repository and CI preparation may continue, but public Beta
   publication remains gated on a fresh production login, status, logout, and re-login validation
   after the entry is deployed.
+- Source Codex and Claude manifests are environment-neutral templates with version `0.0.0`.
+  Development and Beta assembly both inject their requested manifest versions. Codex manifest,
+  Codex Marketplace, and Skill metadata display names are all `Vivago Agent CLI`; channel identity
+  remains in version, Marketplace internal name, build profile, and endpoints rather than visible
+  branding. Claude manifest metadata remains unchanged apart from its assembled version. Beta
+  assembly and independent verification reject development wording in either manifest's visible
+  fields and in Skill guidance, and assembly excludes local metadata and interpreter cache files.
+- The public repository README and linked installation guide lead with the company GitHub
+  production Beta channel. They document installation, first login, upgrade, version rollback,
+  uninstall, and troubleshooting for both Codex and Claude Code. Personal GitHub and development
+  Marketplace instructions do not appear in these external-user documents; they remain only in
+  internal development plans and workflow documentation.
+- The personal development package and the company public Beta package are the same product. They
+  must expose identical commands, arguments, output contracts, Skill guidance, launchers, platform
+  support, authentication operations, names, descriptions, and runtime behavior. The only allowed
+  differences are the overseas test versus overseas production endpoints, isolated credential and
+  lock namespaces, development versus Beta version/channel identifiers, Marketplace internal
+  names, and channel-specific release provenance. In particular, production builds must not hide
+  the manual authentication refresh command. Automated distribution tests normalize the allowed
+  release identity fields and compare the remaining plugin files.
 
 ## Explicit non-goals
 

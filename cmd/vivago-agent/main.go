@@ -45,10 +45,7 @@ func runWithAuthFactory(
 		stderr,
 		func(ctx context.Context, stderr io.Writer) (cli.Runtime, error) {
 			authRuntime, err := factory(ctx, stderr)
-			return cli.Runtime{
-				Auth:                   authRuntime,
-				AllowManualAuthRefresh: config.Current().AllowManualAuthRefresh,
-			}, err
+			return cli.Runtime{Auth: authRuntime}, err
 		},
 	)
 }
@@ -92,10 +89,6 @@ func requiresRuntime(args []string) bool {
 	}
 	if args[0] == "--jsonl" {
 		return args[1] == "ask" || args[1] == "resume"
-	}
-	if len(args) >= 3 && args[0] == "--json" && args[1] == "auth" &&
-		args[2] == "refresh" && !config.Current().AllowManualAuthRefresh {
-		return false
 	}
 	if len(args) >= 3 && args[0] == "--json" && args[1] == "project" && args[2] == "link" {
 		return false
@@ -190,14 +183,13 @@ func newRuntime(ctx context.Context, stderr io.Writer) (cli.Runtime, error) {
 		return cli.Runtime{}, err
 	}
 	return cli.Runtime{
-		Profile:                applicationProfile.Name,
-		WebBaseURL:             applicationProfile.WebBaseURL,
-		Auth:                   authRuntime,
-		Projects:               api,
-		Doctor:                 doctor,
-		Agent:                  api,
-		Conversations:          api,
-		AllowManualAuthRefresh: applicationProfile.AllowManualAuthRefresh,
+		Profile:       applicationProfile.Name,
+		WebBaseURL:    applicationProfile.WebBaseURL,
+		Auth:          authRuntime,
+		Projects:      api,
+		Doctor:        doctor,
+		Agent:         api,
+		Conversations: api,
 	}, nil
 }
 

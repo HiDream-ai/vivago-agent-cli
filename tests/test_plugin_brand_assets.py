@@ -34,6 +34,7 @@ class PluginBrandAssetTests(unittest.TestCase):
             (PLUGIN_ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8")
         )
         interface = manifest["interface"]
+        self.assertEqual(interface["displayName"], "Vivago Agent CLI")
         self.assertEqual(interface["brandColor"], "#574DFF")
         self.assertEqual(
             interface["composerIcon"],
@@ -55,6 +56,7 @@ class PluginBrandAssetTests(unittest.TestCase):
         self.assertNotIn("icon_small:", metadata)
         self.assertNotIn("icon_large:", metadata)
         self.assertIn('brand_color: "#574DFF"', metadata)
+        self.assertIn('display_name: "Vivago Agent CLI"', metadata)
 
     def test_supplied_backgrounds_and_sizes_are_preserved(self) -> None:
         expected = {

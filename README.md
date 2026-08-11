@@ -2,7 +2,7 @@
 
 面向 Codex 和 Claude Code 的 VivagoAgent 本地客户端与插件工程。宿主 Agent 通过包内 Go CLI 把完整任务委派给 VivagoAgent；VivagoAgent 负责内部工具执行和服务端会话历史，本插件不暴露业务 MCP 工具或内部 Skill。
 
-当前仓库只维护 Go 实现，长期源码分支为 `main`。旧 Python Pilot 已从当前源码树移除；历史源码和发布提交通过 Codeup 的 `archive/*` Tag 恢复，不再维护 Pilot 分支。
+当前仓库只维护 Go 实现，长期源码分支为 `main`。
 
 ## 调用链
 
@@ -17,7 +17,7 @@ VivagoAgent Web REST / SSE API
 ```
 
 - 默认构建固定连接海外测试环境，用于开发和测试。
-- `prod` build tag 固定连接海外正式环境，用于后续公开 Beta。
+- `prod` build tag 固定连接海外正式环境，用于公开 Beta。
 - 用户不能通过命令行切换环境，公开包也不支持国内环境。
 - CLI 请求使用 `X-Source: cli`，同时保持 Web 产品语义。
 - 完整对话历史保存在 VivagoAgent；本地任务账本只保存恢复所需的 ID、游标和状态。
@@ -134,67 +134,66 @@ vivago-agent --json artifact download \
 
 `project link` 不访问服务端，由构建时固定的 profile 返回正确环境的 Web 项目链接；插件文档不会自行选择或拼接开发、生产域名。
 
-## 开发插件安装
+## 安装公开 Beta
 
 插件品牌素材和颜色规范见
 [`plugin/assets/README.md`](plugin/assets/README.md)。
 
-当前个人 GitHub 只用于开发验证，Marketplace 分支为 `dev-marketplace`，插件访问海外测试环境。
+公开 Beta 从公司 GitHub 的 `marketplace` 分支安装，内置 macOS、Linux 和 Windows 的 ARM64/x64
+二进制。普通用户不需要安装 Go、Python、`vivago-agent` 或 `vivago-client`。
 
 Codex：
-
-```bash
-codex plugin marketplace add \
-  https://github.com/ChaoXia-Beginer/vivago-agent-cli.git \
-  --ref dev-marketplace
-codex plugin add vivago-agent-cli@vivago-dev
-```
-
-Claude Code：
-
-```bash
-claude plugin marketplace add \
-  'https://github.com/ChaoXia-Beginer/vivago-agent-cli.git#dev-marketplace'
-claude plugin install vivago-agent-cli@vivago-dev --scope user
-```
-
-该开发仓库目前为私有仓库，安装账号需要具有读取权限。对外 Beta 将迁移到公司 GitHub，并由公司流水线使用 `prod` profile 重新构建；不会直接发布个人 GitHub 生成的二进制。
-
-公司仓库公开并发布 Beta 后，生产 Marketplace 固定使用 `marketplace` 分支和 `vivago` 名称：
 
 ```bash
 codex plugin marketplace add \
   https://github.com/HiDream-ai/vivago-agent-cli.git \
   --ref marketplace
 codex plugin add vivago-agent-cli@vivago
+```
 
+Claude Code：
+
+```bash
 claude plugin marketplace add \
   'https://github.com/HiDream-ai/vivago-agent-cli.git#marketplace'
 claude plugin install vivago-agent-cli@vivago --scope user
 ```
 
-上述生产命令在公司仓库和首个 Beta 尚未发布前不会生效，不应改用个人开发 Marketplace 代替。
+安装后重新打开 Codex 或 Claude Code，直接用自然语言说明“请使用 VivagoAgent”。第一次调用会打开
+Vivago 登录页面；用户正常登录即可，不要把 ticket、refresh token、Cookie 或 PAT 复制给宿主 Agent。
 
-给产品同事使用的完整步骤见 [VivagoAgent 插件安装和升级说明](docs/vivago-agent-plugin-product-install-guide.md)。
+升级时先刷新 Marketplace，再刷新插件：
 
-## GitHub 开发流水线
+```bash
+# Codex
+codex plugin marketplace upgrade vivago
+codex plugin add vivago-agent-cli@vivago
 
-`.github/workflows/ci.yml` 在 Pull Request、源码分支 Push 和手动运行时执行完整开发门禁，只上传保留
-14 天的 Marketplace Artifact，不修改 Tag、Release 或分支。
+# Claude Code
+claude plugin marketplace update vivago
+claude plugin update vivago-agent-cli@vivago --scope user
+```
 
-`.github/workflows/dev-release.yml` 只允许从 GitHub Actions 页面手动运行。输入不带 `v` 前缀的开发
-版本，例如 `0.3.0-dev.4`；门禁全部通过后，流水线创建不可覆盖的 GitHub Prerelease，并以普通快进
-提交更新 `dev-marketplace`。个人仓库不能通过参数切换到 `prod`。
+卸载：
 
-Codeup 和个人 GitHub 的长期源码分支均为 `main`。`feature/*` 用于短期开发，合并后删除；不维护
-永久 `prod` 分支。完整分支约定和旧 Pilot 恢复方式见
-[分支收敛设计](docs/plans/2026-08-11-vivago-agent-cli-branch-convergence-design.md)。
+```bash
+codex plugin remove vivago-agent-cli@vivago
+codex plugin marketplace remove vivago
 
-网页和 `gh` 命令行的具体操作见 [GitHub CI/CD 操作手册](docs/github-actions-operation-guide.md)。
+claude plugin uninstall vivago-agent-cli@vivago --scope user
+claude plugin marketplace remove vivago
+```
 
-同一套测试和构建约束可以迁移到公司 GitHub。公司公开 Beta 使用独立、固定 `prod` profile 的发布
-入口以及公司审批和权限保护，不复用个人 GitHub 生成的二进制。详细设计见
-[GitHub 开发 CI 设计](docs/plans/2026-08-07-vivago-agent-cli-github-development-ci-design.md)。
+升级、指定版本回滚和常见问题见
+[VivagoAgent 插件安装和升级说明](docs/vivago-agent-plugin-product-install-guide.md)。
+
+## 发布方式
+
+Pull Request 和 `main` 的检查只构建、测试并上传临时候选包，不会自动改变用户的安装版本。公开
+Beta 由公司 GitHub 的手动发布流程从确定的 `main` 提交重新构建，经过六平台原生启动、Codex 与
+Claude Code 安装生命周期、checksum、SBOM、环境扫描和生产审批后，才会创建 Prerelease 并更新
+`marketplace` 分支。完整流程见
+[公开 Beta 发布设计](docs/plans/2026-08-11-vivago-agent-cli-public-beta-release-design.md)。
 
 ## 验证
 

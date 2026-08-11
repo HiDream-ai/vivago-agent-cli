@@ -15,6 +15,7 @@ from typing import Any
 
 PLUGIN_NAME = "vivago-agent-cli"
 MARKETPLACE_NAME = "vivago-dev"
+CODEX_DISPLAY_NAME = "Vivago Agent CLI"
 TARGETS = (
     "darwin-arm64",
     "darwin-amd64",
@@ -64,6 +65,16 @@ def _sha256(path: Path) -> str:
 def _set_manifest_version(path: Path, version: str) -> None:
     payload = json.loads(path.read_text(encoding="utf-8"))
     payload["version"] = version
+    _write_json(path, payload)
+
+
+def _set_codex_manifest(path: Path, version: str) -> None:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    interface = payload.get("interface")
+    if not isinstance(interface, dict):
+        raise ValueError("Codex plugin manifest must contain an interface object")
+    payload["version"] = version
+    interface["displayName"] = CODEX_DISPLAY_NAME
     _write_json(path, payload)
 
 
@@ -167,7 +178,11 @@ def assemble(args: argparse.Namespace) -> Path:
 
     plugin = args.output / "plugins" / PLUGIN_NAME
     plugin.parent.mkdir(parents=True)
-    shutil.copytree(args.plugin_template, plugin)
+    shutil.copytree(
+        args.plugin_template,
+        plugin,
+        ignore=shutil.ignore_patterns(".DS_Store", "__pycache__", "*.pyc"),
+    )
     for name in LEGAL_FILES:
         shutil.copy2(legal_root / name, plugin / name)
     for target, source in binaries.items():
@@ -184,7 +199,7 @@ def assemble(args: argparse.Namespace) -> Path:
     windows_launcher = scripts / "vivago-agent.cmd"
     windows_launcher.write_text(_windows_launcher(), encoding="utf-8", newline="\r\n")
 
-    _set_manifest_version(plugin / ".codex-plugin" / "plugin.json", args.version)
+    _set_codex_manifest(plugin / ".codex-plugin" / "plugin.json", args.version)
     _set_manifest_version(plugin / ".claude-plugin" / "plugin.json", args.version)
     (plugin / "VERSION").write_text(args.version + "\n", encoding="utf-8")
     _write_json(
@@ -211,7 +226,7 @@ def assemble(args: argparse.Namespace) -> Path:
         args.output / ".agents" / "plugins" / "marketplace.json",
         {
             "name": MARKETPLACE_NAME,
-            "interface": {"displayName": "Vivago Dev"},
+            "interface": {"displayName": CODEX_DISPLAY_NAME},
             "plugins": [
                 {
                     "name": PLUGIN_NAME,
@@ -228,7 +243,7 @@ def assemble(args: argparse.Namespace) -> Path:
             "name": MARKETPLACE_NAME,
             "owner": {"name": "HiDream"},
             "metadata": {
-                "description": "Development marketplace for the cross-platform VivagoAgent Go CLI."
+                "description": "Marketplace for the cross-platform VivagoAgent Go CLI."
             },
             "plugins": [
                 {
