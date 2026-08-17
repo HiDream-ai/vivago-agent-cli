@@ -52,8 +52,11 @@ Codex / Claude Code
 
 发布入口按仓库固定：个人 GitHub 的手动 Release Workflow 只接受 `v0.3.0-dev.N` 并更新
 `dev-marketplace`；公司 GitHub 的手动 Release Workflow 只接受 `v0.3.0-beta.N`，使用
-`prod` profile 重新构建，并在生产审批后更新 `marketplace`。普通 Push 和 Pull Request 只运行
-只读检查，不发布可安装版本。两条 Release Workflow 都不提供 profile、环境地址、Marketplace
+`prod` profile 重新构建，并在生产确认后更新 `marketplace`。普通 Push 和 Pull Request 只运行
+只读检查，不发布可安装版本。公司仓库已经创建 `production-beta` Environment，并把部署来源限制
+为公司 `main`。当前私有仓库套餐不支持 required reviewer 或 wait timer，因此临时由公司仓库写
+权限、手动 `workflow_dispatch`、仓库/分支/版本硬校验共同承担人工授权；仓库公开或套餐升级后补
+至少一名 Environment reviewer。两条 Release Workflow 都不提供 profile、环境地址、Marketplace
 名称或 channel 输入，仓库身份不匹配时直接失败。
 
 同一份源码保留两套构建配置，不提供运行时 `--env`：
