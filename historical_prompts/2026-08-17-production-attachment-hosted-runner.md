@@ -35,3 +35,13 @@ Environment Secret and keep the approach safe when the repository becomes public
 - Do not add runtime endpoint or environment switching.
 - Do not enable proxy use or relax DNS, TLS, port, or redirect checks in the uploader.
 - Do not store production refresh credentials in GitHub.
+
+## Verification
+
+- Passed: exact company-main production Beta rebuild and provenance validation.
+- Passed: native macOS ARM64 Codex plugin installation and ticket-only credential load.
+- Passed: production attachment upload and recognition, image generation, artifact preview, and
+  artifact download.
+- Passed: sanitized report contained no service identifiers, credentials, or signed URLs.
+- Passed: runner credential cleanup and post-run GitHub Environment Secret deletion.
+- Not run: Claude Code model invocation, six-platform online production matrix, and Beta publication.

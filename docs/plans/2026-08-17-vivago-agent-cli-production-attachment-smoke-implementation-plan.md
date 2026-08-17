@@ -5,6 +5,20 @@
 关联设计：
 [`2026-08-17-vivago-agent-cli-production-attachment-smoke-design.md`](2026-08-17-vivago-agent-cli-production-attachment-smoke-design.md)
 
+## 完成状态
+
+| 阶段 | 状态 | 结果 |
+| --- | --- | --- |
+| 凭证 profile | 完成 | `seed`、`clear`、`publish` 显式支持受限 `dev/prod`；命名空间隔离测试通过 |
+| 生产单宿主验证器 | 完成 | 保持 Dev/双宿主默认行为；增加 prod、Codex 和 attachment-artifact 范围 |
+| 独立生产 Workflow | 完成 | 公司 `main`、手动、`production-beta`、macOS ARM64、Codex、只读权限 |
+| 本地门禁 | 完成 | Go default/prod/race/vet、Python 118/118、官方 Codex 插件校验通过 |
+| 受控线上验证 | 完成 | 生产附件识别、图片生成、preview/download 通过；脱敏报告复核通过 |
+| Secret 清理 | 完成 | Runner 凭证已清理；Environment Secret 已删除并只读确认不存在 |
+
+本 Workflow 没有创建 Tag、Release、attestation 或 Marketplace 提交。生产候选的发布和回滚验收仍按
+公开 Beta 总计划独立执行。
+
 ## 阶段一：凭证 profile
 
 1. 在 `internal/e2eauth` 测试中建立能区分 Keychain service/account 的内存实现。

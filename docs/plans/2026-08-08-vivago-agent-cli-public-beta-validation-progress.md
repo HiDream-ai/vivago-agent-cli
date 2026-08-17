@@ -1,16 +1,21 @@
 # VivagoAgent CLI 公开 Beta 验证进度（L0–L3）
 
-更新时间：2026-08-11
+更新时间：2026-08-17
 
 当前长期源码分支：`main`
 
 当前开发版本：`0.3.0-dev.8`
 
-验证环境：海外测试环境（`profile=dev`、`environment=overseas-test`）
+当前生产候选：`0.3.0-beta.1`
+
+验证环境：海外测试环境（`profile=dev`）与海外生产环境（`profile=prod`）
 
 当前可以确认：`dev.8` 的六平台构建、原生 CLI 和 Codex/Claude Code 插件生命周期已经跑通；此前 ticket-only 在线业务验证仍为 12/12。macOS ARM64 还补齐了真实登录、刷新、退出、重登、Codex 自然语言选择 Skill，以及 CLI 项目在 Web 页面可见性。
 
-这还不是“完整公开 Beta 验收完成”。当前下一项外部阻断是生产 `/agent/login` 尚未部署；生产登录、生产受控 L3、仓库公开和 Beta 发布均未执行。本轮按用户决定不验证 Claude Code 模型主动选择 Skill。
+这还不是“完整公开 Beta 发布完成”。生产 `/agent/login` 已上线，生产登录/刷新/退出/重登、Codex
+代表平台文本任务、Web 可见性、SSE 断流恢复以及 Hosted Runner 附件/产物闭环均已通过。尚未执行
+生产候选回滚演练、公司仓库公开和 Beta Release 发布。本轮按用户决定不验证 Claude Code 模型主动
+选择 Skill。
 
 ## 当前进度总表
 
@@ -19,7 +24,7 @@
 | L0 | 六平台交叉编译、Marketplace 组装、checksum、环境地址扫描和静态门禁 | 6/6 | 已通过 | [Development Release #31484366464](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/31484366464)、[v0.3.0-dev.8](https://github.com/ChaoXia-Beginer/vivago-agent-cli/releases/tag/v0.3.0-dev.8) | 代码签名和公证不属于首个 Beta 阻断项 |
 | L1 | 在真实 OS/CPU Runner 上启动对应二进制，验证 launcher、`version` 和 `doctor` | 6/6 | 已通过 | dev.8 发布门禁的六平台原生报告 | 六个平台均为真实目标 Runner，不使用兼容层代替 |
 | L2 | Codex/Claude Code 插件安装、发现、升级、回滚、再升级 | 12/12 | 已通过 | [Development Release #31484366464](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/31484366464)，12 份脱敏报告 | 宿主模型主动选择 Skill 另行验证；本轮仅验证 Codex |
-| L3 | 通过安装后的插件 CLI 调用真实 VivagoAgent Web API，验证任务、SSE、附件、产物、取消和历史 | 12/12 | 已通过（ticket-only 范围） | [Hosted L3 #31232383974](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/31232383974)，6 份双宿主脱敏报告 | Hosted 矩阵不含登录和模型；dev.8 代表平台已补鉴权、Codex 与 Web，生产 L3 未跑 |
+| L3 | 通过安装后的插件 CLI 调用真实 VivagoAgent Web API，验证任务、SSE、附件和产物 | Dev 12/12；Prod 1/1 | 代表范围已通过 | [Dev Hosted L3 #31232383974](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/31232383974)；[Production Attachment Smoke #32024362266](https://github.com/HiDream-ai/vivago-agent-cli/actions/runs/32024362266) | 生产只验证 macOS ARM64/Codex；Claude Code 模型调用本轮不验 |
 
 这里的计数口径不同：L0/L1 按六个平台计数，L2/L3 按“六个平台 × 两个宿主”计数。
 
@@ -60,6 +65,38 @@
 | 最终 L3 运行 | [Manual Hosted L3 #31232383974](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/31232383974) |
 | 个人 main 对齐后 CI | [Development CI #31485750215](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/31485750215) |
 | 公司 main Beta Check | [Beta Check #31483042861](https://github.com/HiDream-ai/vivago-agent-cli/actions/runs/31483042861) |
+| 生产候选源码 | `15ba0bc87eb8ad211cb8adf6850a6e925b8f5a93` |
+| 生产附件与产物 | [Production Attachment Smoke #32024362266](https://github.com/HiDream-ai/vivago-agent-cli/actions/runs/32024362266) |
+
+## 2026-08-17 生产 Beta 代表平台验收
+
+生产候选从公司 `main` 的准确 SHA `15ba0bc87eb8ad211cb8adf6850a6e925b8f5a93` 使用
+`-tags prod` 构建，版本为 `0.3.0-beta.1`。本轮不发布 Tag、Release 或 Marketplace，只验证生产
+环境和代表平台。
+
+| 用例 | 结果 | 证据和边界 |
+| --- | --- | --- |
+| 首次生产网页登录 | PASS | 生产 `/agent/login` 与随机 loopback Form POST 回调成功，凭证保存至生产 Keychain 命名空间 |
+| `auth refresh` | PASS | 强制刷新成功，stdout 只有 `refreshed=true` 与 `backend=keychain` |
+| `auth logout` / 重登 | PASS | 退出后状态为未登录，第二次浏览器登录后恢复为已登录 |
+| Codex 选择生产插件 | PASS | 隔离 Codex 安装 `vivago-agent-cli@vivago`，完成一条低成本文本 Turn；没有直调业务 API |
+| Web 可见性 | PASS | 生产 CLI 创建的项目、请求和回复可在 `vivago.ai` 打开 |
+| SSE 断流恢复 | PASS | 在非终态事件后断开，使用同一 Turn 和 cursor 恢复；13 个后续事件、0 个重复事件 ID、1 个 `RUN_FINISHED`，没有重发 prompt |
+| 本机附件上传 | BLOCKED/ENV | Dev/Prod 返回相同上传 Host，当前 Mac 安全直连均失败；原因是本机网络/VPN/代理出口，不是 profile 或服务端差异 |
+| Hosted Runner 生产附件 | PASS | 公司 Run `32024362266` 的 macOS ARM64/Codex 识别红绿蓝测试图，证明生产上传凭证和对象存储公网路径可用 |
+| 图片生成 | PASS | 同一生产会话生成一张图片并返回已验证产物 |
+| 产物预览与下载 | PASS | preview/download 内容一致；脱敏报告记录 `image/jpeg`、447040 字节，不记录对象标识或 URL |
+| 一次性凭证治理 | PASS | GitHub 只接收短期 ticket，不含 refresh token；Runner `always()` 清理 Keychain；运行后删除 Environment Secret并确认列表为空 |
+| Claude Code 模型调用 | 本轮不验 | 用户明确移出本轮；L2 插件安装生命周期证据仍为 12/12 |
+| Beta 发布 | 未执行 | 该 Workflow 只有 `contents: read`，不会创建 Tag、Release、attestation 或更新 Marketplace |
+
+### 本机上传阻断与 Hosted Runner 结论
+
+历史海外测试本机附件成功和 Hosted Runner Dev 12/12 均是真实结果。2026-08-17 的隐私安全对比证明
+Dev/Prod 当前返回同一上传 Host，但这台 Mac 的安全直连 PUT 两边都失败；代理尝试也不稳定，不能据此
+放宽上传器的 SSRF 防护。公司 GitHub 原生 macOS ARM64 Runner 随后对生产环境完成附件和产物闭环，
+因此当前结论是：生产服务和标准公网直连路径可用，本机失败属于当前网络出口阻断。代理网络兼容性
+作为后续兼容项保留，不是本次生产服务失败。
 
 ## 2026-08-11 dev.8 发布前收口
 
@@ -72,7 +109,7 @@
 | Claude Code 自然语言选择 Skill | 本轮不验 | 插件包已升级到 dev.8；宿主模型账号失效后，用户明确将该项移出本轮验收范围，没有提交 VivagoAgent Turn |
 | CLI 项目在 Web 可见 | PASS | Web 页面展示同一项目标题、用户请求和 VivagoAgent 回复，证明复用服务端项目与会话历史 |
 | 公司 `production-beta` Environment | PASS（有限制） | 已创建并只允许公司 `main`；当前私有仓库套餐不支持 reviewer/wait timer，暂由仓库写权限与手动发布入口承担人工授权 |
-| 海外生产登录与 L3 | BLOCKED/ENV | 生产 `/agent/login` 尚未部署，本轮未调用生产业务 API、未发布 Beta |
+| 海外生产登录与 L3 | 当时 BLOCKED/ENV | 2026-08-11 时生产 `/agent/login` 尚未部署；已由上方 2026-08-17 生产验收结果替代 |
 
 本轮在线用例严格使用 dev.8 编译期固定的海外测试环境。没有复用 App API、没有把测试凭据注入生产构建，也没有把项目、Conversation 或 Turn 标识写入仓库文档。
 
@@ -98,7 +135,7 @@ L0 先回答“六个平台的包能不能稳定构建出来”。它不依赖�
 | Go prod 测试 | PASS | `go test -tags prod ./...` |
 | Race | PASS | `go test -race ./...` |
 | Vet | PASS | `go vet ./...` |
-| Python 验证器测试 | 114/114 PASS | 包含 Dev/Beta workflow、六平台、双宿主、供应链和 L3 报告契约 |
+| Python 验证器测试 | 118/118 PASS | 包含 Dev/Beta workflow、六平台、双宿主、供应链、生产 Secret边界和 L3 报告契约 |
 | Codex 官方本地校验 | PASS | 插件 manifest 和目录结构有效 |
 | Claude 插件校验 | PASS | Claude Code 能识别插件结构 |
 | 六平台构建 | 6/6 PASS | darwin/linux/windows × arm64/amd64 |
