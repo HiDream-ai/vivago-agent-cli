@@ -400,7 +400,9 @@ JPG/JPEG/PNG、MP4、MP3、DOC/DOCX/TXT/MD/PDF 和 SRT/VTT/ASS/SSA；数量上�
 上传凭证继续从 Web `/prod-api/user/google_key/{bucket}` 获取；Authorization 只发送给 Vivago
 域名，预签名 URL 的 PUT 只携带 Content-Type 和 Content-Length。文件以 `os.File` 流式发送，
 不把 300 MiB 视频整体读入内存。上传 URL 只允许 HTTPS 443、无 userinfo/fragment、实际拨号时
-全部 DNS 结果必须是公网地址，并禁用环境代理和所有上传重定向；预签名 URL 永不进入 Chat 请求体、
+全部 DNS 结果必须是公网地址。网络路径遵循标准环境代理：没有适用代理时继续按已校验公网 IP 直连，
+存在适用代理时先完成业务目标 URL 和公网 DNS 校验，再连接用户明确配置的代理；上传仍禁止所有重定向。
+预签名 URL 永不进入 Chat 请求体、
 stdout、stderr 或错误文本，Chat 中只保存 OSS key、媒体类型和安全的文件 basename。
 
 ### 产物下载
@@ -413,8 +415,10 @@ stdout、stderr 或错误文本，Chat 中只保存 OSS key、媒体类型和安
 
 Go 实现对现成 URL 采用与媒体类型绑定的域名白名单：图片只能使用
 `storage.vivago.ai`，视频和音频只能使用 `media.vivago.ai`，只允许 HTTPS 443 且拒绝
-userinfo、fragment 和跨域/降级重定向。下载连接绕过环境代理并在实际 Dial 时重新解析 DNS；任一解析结果
-属于 loopback、私网、链路本地、未指定或非全局单播地址时整体拒绝，避免“校验后再解析”的 DNS rebinding。
+userinfo、fragment 和跨域/降级重定向。下载连接遵循标准环境代理：直连时在实际 Dial 中重新解析并固定
+到已校验公网 IP；代理模式在发送请求前校验业务目标域名和全部本地 DNS 结果，再连接用户明确配置的代理。
+业务目标任一解析结果属于 loopback、私网、链路本地、未指定或非全局单播地址时整体拒绝；允许代理自身
+位于 loopback 或私网地址。
 下载体使用流式大小上限，先写目标同目录的 `0600` 临时文件，再通过不覆盖的硬链接原子发布；目标已经存在、
 Content-Type 不匹配、超过大小或中途失败时都不留下目标文件，预览文件使用独立随机临时目录。
 
