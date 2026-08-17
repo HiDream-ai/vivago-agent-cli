@@ -36,6 +36,38 @@ type Downloader struct {
 	limits     map[string]int64
 }
 
+type environmentProxyTransport struct {
+	proxy    func(*http.Request) (*url.URL, error)
+	direct   *http.Transport
+	proxied  *http.Transport
+	resolver IPResolver
+}
+
+func (transport *environmentProxyTransport) RoundTrip(request *http.Request) (*http.Response, error) {
+	selected, err := transport.transportFor(request)
+	if err != nil {
+		return nil, err
+	}
+	return selected.RoundTrip(request)
+}
+
+func (transport *environmentProxyTransport) transportFor(request *http.Request) (http.RoundTripper, error) {
+	proxyURL, err := transport.proxy(request)
+	if err != nil {
+		return nil, fmt.Errorf("select environment proxy")
+	}
+	if proxyURL == nil {
+		return transport.direct, nil
+	}
+	if err := validateArtifactTarget(request.URL); err != nil {
+		return nil, err
+	}
+	if _, err := resolvePublicAddresses(request.Context(), transport.resolver, request.URL.Hostname()); err != nil {
+		return nil, err
+	}
+	return transport.proxied, nil
+}
+
 func NewDownloader(transport http.RoundTripper) *Downloader {
 	var httpClient *http.Client
 	if transport == nil {
@@ -90,7 +122,7 @@ func (downloader *Downloader) Download(
 	}
 	response, err := downloader.httpClient.Do(request)
 	if err != nil {
-		return DownloadResult{}, fmt.Errorf("download artifact: %w", err)
+		return DownloadResult{}, fmt.Errorf("download artifact")
 	}
 	defer response.Body.Close()
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
@@ -189,17 +221,8 @@ func matchesMediaType(mediaType, contentType string) bool {
 
 func newSecureHTTPClient(resolver IPResolver) *http.Client {
 	dialer := &net.Dialer{Timeout: 10 * time.Second, KeepAlive: 30 * time.Second}
-	transport := &http.Transport{
-		Proxy:                 nil,
-		ForceAttemptHTTP2:     true,
-		MaxIdleConns:          4,
-		IdleConnTimeout:       30 * time.Second,
-		TLSHandshakeTimeout:   10 * time.Second,
-		ResponseHeaderTimeout: 30 * time.Second,
-		ExpectContinueTimeout: time.Second,
-		TLSClientConfig:       &tls.Config{MinVersion: tls.VersionTLS12},
-	}
-	transport.DialContext = func(ctx context.Context, network, address string) (net.Conn, error) {
+	direct := newHTTPTransport(nil, dialer.DialContext)
+	direct.DialContext = func(ctx context.Context, network, address string) (net.Conn, error) {
 		host, port, err := net.SplitHostPort(address)
 		if err != nil || port != "443" ||
 			(!strings.EqualFold(host, imageHost) && !strings.EqualFold(host, mediaHost)) {
@@ -219,10 +242,49 @@ func newSecureHTTPClient(resolver IPResolver) *http.Client {
 		}
 		return nil, fmt.Errorf("connect to artifact host: %w", lastErr)
 	}
+	proxied := newHTTPTransport(http.ProxyFromEnvironment, dialer.DialContext)
 	return &http.Client{
-		Transport:     transport,
+		Transport: &environmentProxyTransport{
+			proxy:    http.ProxyFromEnvironment,
+			direct:   direct,
+			proxied:  proxied,
+			resolver: resolver,
+		},
 		CheckRedirect: secureRedirectPolicy(),
 	}
+}
+
+func newHTTPTransport(
+	proxy func(*http.Request) (*url.URL, error),
+	dialContext func(context.Context, string, string) (net.Conn, error),
+) *http.Transport {
+	return &http.Transport{
+		Proxy:                 proxy,
+		DialContext:           dialContext,
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          4,
+		IdleConnTimeout:       30 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ResponseHeaderTimeout: 30 * time.Second,
+		ExpectContinueTimeout: time.Second,
+		TLSClientConfig:       &tls.Config{MinVersion: tls.VersionTLS12},
+	}
+}
+
+func validateArtifactTarget(parsed *url.URL) error {
+	if parsed == nil || parsed.Scheme != "https" || parsed.Opaque != "" || parsed.Hostname() == "" {
+		return fmt.Errorf("artifact target must use HTTPS")
+	}
+	if parsed.User != nil || parsed.Fragment != "" {
+		return fmt.Errorf("artifact target contains forbidden authority or fragment data")
+	}
+	if port := parsed.Port(); port != "" && port != "443" {
+		return fmt.Errorf("artifact target uses a forbidden port")
+	}
+	if !strings.EqualFold(parsed.Hostname(), imageHost) && !strings.EqualFold(parsed.Hostname(), mediaHost) {
+		return fmt.Errorf("artifact target host is not allowed")
+	}
+	return nil
 }
 
 func resolvePublicAddresses(

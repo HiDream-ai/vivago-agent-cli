@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -111,6 +112,93 @@ func TestPutRevalidatesFileBeforeUpload(t *testing.T) {
 	}
 }
 
+func TestSecureHTTPClientUsesConfiguredLocalEnvironmentProxy(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	t.Setenv("HTTPS_PROXY", "http://"+listener.Addr().String())
+	t.Setenv("https_proxy", "")
+	t.Setenv("NO_PROXY", "")
+	t.Setenv("no_proxy", "")
+
+	client := newSecureHTTPClient(staticResolver{addresses: []net.IPAddr{{IP: net.ParseIP("8.8.8.8")}}})
+	selector, ok := client.Transport.(requestTransportSelector)
+	if !ok {
+		t.Fatalf("transport %T does not separate direct and proxy routes", client.Transport)
+	}
+	request, err := http.NewRequest(http.MethodPut, "https://upload.example.com/object", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	selected, err := selector.transportFor(request)
+	if err != nil {
+		t.Fatalf("select transport: %v", err)
+	}
+	transport, ok := selected.(*http.Transport)
+	if !ok {
+		t.Fatalf("selected transport = %T", selected)
+	}
+	if transport.Proxy == nil {
+		t.Fatal("environment proxy selector is disabled")
+	}
+	proxyURL, err := transport.Proxy(request)
+	if err != nil {
+		t.Fatalf("select proxy: %v", err)
+	}
+	if proxyURL == nil || proxyURL.Host != listener.Addr().String() {
+		t.Fatalf("proxy = %v", proxyURL)
+	}
+	connection, err := transport.DialContext(context.Background(), "tcp", proxyURL.Host)
+	if err != nil {
+		t.Fatalf("dial configured local proxy: %v", err)
+	}
+	connection.Close()
+}
+
+func TestEnvironmentProxyRouteRejectsPrivateUploadTarget(t *testing.T) {
+	proxyURL, err := url.Parse("http://127.0.0.1:7890")
+	if err != nil {
+		t.Fatal(err)
+	}
+	transport := &environmentProxyTransport{
+		proxy:   func(*http.Request) (*url.URL, error) { return proxyURL, nil },
+		direct:  &http.Transport{},
+		proxied: &http.Transport{},
+		resolver: staticResolver{addresses: []net.IPAddr{{
+			IP: net.ParseIP("10.0.0.9"),
+		}}},
+	}
+	request, err := http.NewRequest(http.MethodPut, "https://upload.example.com/object", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := transport.transportFor(request); err == nil {
+		t.Fatal("private upload target was routed through the proxy")
+	}
+}
+
+func TestNoEnvironmentProxyKeepsSecureDirectUploadTransport(t *testing.T) {
+	direct := &http.Transport{}
+	transport := &environmentProxyTransport{
+		proxy:   func(*http.Request) (*url.URL, error) { return nil, nil },
+		direct:  direct,
+		proxied: &http.Transport{},
+	}
+	request, err := http.NewRequest(http.MethodPut, "https://upload.example.com/object", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	selected, err := transport.transportFor(request)
+	if err != nil {
+		t.Fatalf("select direct transport: %v", err)
+	}
+	if selected != direct {
+		t.Fatalf("selected transport = %T, want direct transport", selected)
+	}
+}
+
 func TestPublicIPClassificationRejectsSSRFAddressRanges(t *testing.T) {
 	tests := []struct {
 		address string
@@ -133,6 +221,18 @@ func TestPublicIPClassificationRejectsSSRFAddressRanges(t *testing.T) {
 }
 
 type roundTripFunc func(*http.Request) (*http.Response, error)
+
+type requestTransportSelector interface {
+	transportFor(*http.Request) (http.RoundTripper, error)
+}
+
+type staticResolver struct {
+	addresses []net.IPAddr
+}
+
+func (resolver staticResolver) LookupIPAddr(context.Context, string) ([]net.IPAddr, error) {
+	return resolver.addresses, nil
+}
 
 func (function roundTripFunc) RoundTrip(request *http.Request) (*http.Response, error) {
 	return function(request)

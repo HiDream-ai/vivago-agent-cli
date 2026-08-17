@@ -172,6 +172,21 @@ claude plugin update vivago-agent-cli@vivago --scope user
 首次登录需要本机默认浏览器和 loopback 回调。远程容器、纯命令行服务器或禁止打开浏览器的环境
 不能完成登录，请改用本地桌面环境。不要用手工复制 token 或直接调用业务 API 的方式绕过登录。
 
+### 网络需要代理
+
+插件内 CLI 的普通 API、附件上传和产物下载统一遵循标准 `HTTP_PROXY`、`HTTPS_PROXY` 和
+`NO_PROXY`。没有配置时直连。以本地代理监听 `127.0.0.1:7890` 为例：
+
+```bash
+export HTTP_PROXY=http://127.0.0.1:7890
+export HTTPS_PROXY=http://127.0.0.1:7890
+export NO_PROXY=127.0.0.1,localhost
+```
+
+从设置了这些变量的同一个终端启动 Codex 或 Claude Code，并在修改变量后完全重启宿主。仅在代理
+软件界面中打开“系统代理”不保证终端进程能够读取；TUN/VPN 模式由系统路由接管。不要在反馈信息中
+粘贴包含用户名或密码的代理地址。
+
 ### 升级后仍显示旧版本
 
 先更新 Marketplace，再更新插件并完全重启宿主。仍未生效时，只需反馈 `plugin list --json` 中的
@@ -184,6 +199,7 @@ claude plugin update vivago-agent-cli@vivago --scope user
 - `plugin list --json` 显示的插件版本；
 - 问题发生的大致时间；
 - 出现在安装、登录、任务提交、恢复还是结果展示阶段；
+- 是否使用标准环境代理或 TUN/VPN，但不要提供代理地址或凭证；
 - 界面中可见的错误信息。
 
 不要发送 GitHub PAT、Vivago ticket、refresh token、Cookie、Authorization Header、预签名 URL、
