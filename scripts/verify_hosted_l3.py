@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run ticket-only VivagoAgent L3 smoke checks through both installed plugin hosts."""
+"""Run ticket-only VivagoAgent L3 smoke checks through selected plugin hosts."""
 
 from __future__ import annotations
 
@@ -31,9 +31,9 @@ TARGETS = (
     "windows-amd64",
 )
 HOSTS = ("codex", "claude-code")
-PLUGIN_ID = "vivago-agent-cli@vivago-dev"
 PLUGIN_NAME = "vivago-agent-cli"
-MARKETPLACE_NAME = "vivago-dev"
+PROFILES = ("dev", "prod")
+SCOPES = ("full", "attachment-artifact")
 REVISION = re.compile(r"^[0-9a-fA-F]{40}$")
 SAFE_IDENTIFIER = re.compile(r"^[A-Za-z0-9_.:-]+$")
 IMAGE_ARTIFACT = re.compile(r"^[pj]_[0-9a-fA-F-]{20,}$")
@@ -55,7 +55,49 @@ def arguments(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--source-revision", required=True)
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--report", type=Path, required=True)
-    return parser.parse_args(argv)
+    parser.add_argument("--expected-profile", choices=PROFILES, default="dev")
+    parser.add_argument("--host", dest="hosts", choices=HOSTS, action="append")
+    parser.add_argument("--scope", choices=SCOPES, default="full")
+    args = parser.parse_args(argv)
+    if args.hosts is None:
+        args.hosts = list(HOSTS)
+    return args
+
+
+def profile_contract(profile: str) -> dict[str, str]:
+    try:
+        return {
+            "dev": {
+                "profile": "dev",
+                "channel": "dev",
+                "environment": "overseas-test",
+                "marketplace": "vivago-dev",
+                "plugin_id": "vivago-agent-cli@vivago-dev",
+                "web_host": "dev.vivago.ai",
+            },
+            "prod": {
+                "profile": "prod",
+                "channel": "beta",
+                "environment": "overseas-production",
+                "marketplace": "vivago",
+                "plugin_id": "vivago-agent-cli@vivago",
+                "web_host": "vivago.ai",
+            },
+        }[profile]
+    except KeyError as exc:
+        raise ValueError("unsupported profile") from exc
+
+
+def sanitize_production_case(case: dict[str, Any]) -> dict[str, Any]:
+    allowed = (
+        "host",
+        "plugin_version",
+        "credential_backend",
+        "artifact_bytes",
+        "artifact_content_type",
+        "checks",
+    )
+    return {key: case[key] for key in allowed if key in case}
 
 
 def detect_native_target() -> str:
@@ -335,16 +377,18 @@ def validate_project_link(
     data: Any,
     project_id: str,
     conversation_id: str,
+    expected_profile: str,
 ) -> str:
-    if not isinstance(data, dict) or data.get("profile") != "dev":
-        raise ValueError("project link did not report the development profile")
+    contract = profile_contract(expected_profile)
+    if not isinstance(data, dict) or data.get("profile") != contract["profile"]:
+        raise ValueError("project link did not report the expected profile")
     if data.get("project_id") != project_id or data.get("conversation_id") != conversation_id:
         raise ValueError("project link changed the requested identifiers")
     deep_link = data.get("deep_link")
     if not isinstance(deep_link, str):
         raise ValueError("project link did not return a URL")
     parsed = urlsplit(deep_link)
-    if parsed.scheme != "https" or parsed.netloc != "dev.vivago.ai":
+    if parsed.scheme != "https" or parsed.netloc != contract["web_host"]:
         raise ValueError("project link returned an unexpected origin")
     if parsed.path != "/agent/new-chat" or parsed.fragment:
         raise ValueError("project link returned an unexpected path")
@@ -666,6 +710,7 @@ def _install_plugin(
     environment: dict[str, str],
     cwd: Path,
     marketplace: Path,
+    plugin_id: str,
 ) -> None:
     if host == "codex":
         _run(
@@ -679,7 +724,7 @@ def _install_plugin(
             label="Codex marketplace add",
         )
         _run(
-            host_command(executable, target, ["plugin", "add", PLUGIN_ID, "--json"]),
+            host_command(executable, target, ["plugin", "add", plugin_id, "--json"]),
             environment=environment,
             cwd=cwd,
             label="Codex plugin install",
@@ -699,7 +744,7 @@ def _install_plugin(
         host_command(
             executable,
             target,
-            ["plugin", "install", PLUGIN_ID, "--scope", "user"],
+            ["plugin", "install", plugin_id, "--scope", "user"],
         ),
         environment=environment,
         cwd=cwd,
@@ -715,6 +760,8 @@ def _installed_plugin(
     cwd: Path,
     root: Path,
     expected_version: str,
+    plugin_id: str,
+    marketplace_name: str,
 ) -> Path:
     result = _run(
         host_command(executable, target, ["plugin", "list", "--json"]),
@@ -731,7 +778,7 @@ def _installed_plugin(
         (
             item
             for item in records
-            if isinstance(item, dict) and item.get(identifier) == PLUGIN_ID
+            if isinstance(item, dict) and item.get(identifier) == plugin_id
         ),
         None,
     )
@@ -743,7 +790,7 @@ def _installed_plugin(
             / "codex-home"
             / "plugins"
             / "cache"
-            / MARKETPLACE_NAME
+            / marketplace_name
             / PLUGIN_NAME
             / expected_version
         )
@@ -763,6 +810,102 @@ def _launcher(installed: Path, target: str) -> Path:
     return launcher
 
 
+def _run_image_artifact_case(
+    *,
+    launcher: Path,
+    target: str,
+    environment: dict[str, str],
+    work: Path,
+    host: str,
+    conversation_id: str,
+) -> tuple[dict[str, str], int, str]:
+    image_stream = _run(
+        launcher_command(
+            launcher,
+            target,
+            [
+                "--jsonl",
+                "ask",
+                "--conversation-id",
+                conversation_id,
+                "--prompt",
+                (
+                    "Generate one simple square test image of a blue circle centered on a plain "
+                    "white background. Use the image generation tool and return the final image."
+                ),
+            ],
+        ),
+        environment=environment,
+        cwd=work,
+        label=f"{host} image artifact task",
+        timeout=600,
+    )
+    image_result = _parse_finished_for(image_stream.stdout, f"{host} image artifact task")
+    if image_result["conversation_id"] != conversation_id:
+        raise ValueError(f"{host} image artifact task changed the conversation")
+    image_content_id = extract_image_artifact(image_stream.stdout)
+
+    preview = _envelope_data(
+        _run(
+            launcher_command(
+                launcher,
+                target,
+                [
+                    "--json",
+                    "artifact",
+                    "preview",
+                    "--media-type",
+                    "image",
+                    "--content-id",
+                    image_content_id,
+                ],
+            ),
+            environment=environment,
+            cwd=work,
+            label=f"{host} artifact preview",
+            timeout=300,
+        ),
+        f"{host} artifact preview",
+    )
+    preview_bytes, preview_content_type, preview_path = validate_artifact_file(preview)
+    if not preview_path.parent.name.startswith("vivago-agent-preview-"):
+        raise ValueError(f"{host} artifact preview used an unexpected directory")
+    shutil.rmtree(preview_path.parent)
+
+    download_path = work / "hosted-l3-generated.png"
+    downloaded = _envelope_data(
+        _run(
+            launcher_command(
+                launcher,
+                target,
+                [
+                    "--json",
+                    "artifact",
+                    "download",
+                    "--media-type",
+                    "image",
+                    "--content-id",
+                    image_content_id,
+                    "--output",
+                    str(download_path),
+                ],
+            ),
+            environment=environment,
+            cwd=work,
+            label=f"{host} artifact download",
+            timeout=300,
+        ),
+        f"{host} artifact download",
+    )
+    download_bytes, download_content_type, _ = validate_artifact_file(
+        downloaded,
+        download_path,
+    )
+    if preview_content_type != download_content_type or preview_bytes != download_bytes:
+        raise ValueError(f"{host} preview and download returned different artifacts")
+    return image_result, download_bytes, download_content_type
+
+
 def _run_host_case(
     *,
     host: str,
@@ -771,6 +914,8 @@ def _run_host_case(
     version: str,
     run_id: str,
     root: Path,
+    contract: dict[str, str],
+    scope: str,
 ) -> dict[str, Any]:
     host_root = root / host
     host_root.mkdir()
@@ -778,7 +923,15 @@ def _run_host_case(
     work.mkdir()
     environment = _host_environment(host, host_root)
     executable = _host_executable(host)
-    _install_plugin(host, executable, target, environment, work, marketplace)
+    _install_plugin(
+        host,
+        executable,
+        target,
+        environment,
+        work,
+        marketplace,
+        contract["plugin_id"],
+    )
     installed = _installed_plugin(
         host,
         executable,
@@ -787,6 +940,8 @@ def _run_host_case(
         work,
         host_root,
         version,
+        contract["plugin_id"],
+        contract["marketplace"],
     )
     launcher = _launcher(installed, target)
 
@@ -894,6 +1049,7 @@ def _run_host_case(
         project_link,
         project_id,
         stream_result["conversation_id"],
+        contract["profile"],
     )
 
     attachment_path = work / "hosted-l3-attachment.png"
@@ -929,6 +1085,37 @@ def _run_host_case(
         raise ValueError(f"{host} attachment task changed the conversation")
     if not stream_text_matches(attachment_stream.stdout, "red, green, blue"):
         raise ValueError(f"{host} did not read the uploaded attachment correctly")
+
+    if scope == "attachment-artifact":
+        image_result, download_bytes, download_content_type = _run_image_artifact_case(
+            launcher=launcher,
+            target=target,
+            environment=environment,
+            work=work,
+            host=host,
+            conversation_id=stream_result["conversation_id"],
+        )
+        return {
+            "host": host,
+            "plugin_version": version,
+            "credential_backend": str(status.get("backend", "")),
+            "project_id": project_id,
+            **stream_result,
+            "attachment_turn_id": attachment_result["turn_id"],
+            "artifact_turn_id": image_result["turn_id"],
+            "artifact_bytes": download_bytes,
+            "artifact_content_type": download_content_type,
+            "project_link_host": project_link_host,
+            "checks": {
+                "plugin_install": "PASS",
+                "credential_load": "PASS",
+                "text_task": "PASS_SETUP",
+                "attachment": "PASS",
+                "project_link": "PASS",
+                "artifact_preview_download": "PASS",
+                "image_generation": "PASS",
+            },
+        }
 
     clarification_stream = _run(
         launcher_command(
@@ -1042,90 +1229,14 @@ def _run_host_case(
     except ValueError as exc:
         raise ValueError(f"{host} resumed text task: {exc}") from exc
 
-    image_stream = _run(
-        launcher_command(
-            launcher,
-            target,
-            [
-                "--jsonl",
-                "ask",
-                "--conversation-id",
-                stream_result["conversation_id"],
-                "--prompt",
-                (
-                    "Generate one simple square test image of a blue circle centered on a plain "
-                    "white background. Use the image generation tool and return the final image."
-                ),
-            ],
-        ),
+    image_result, download_bytes, download_content_type = _run_image_artifact_case(
+        launcher=launcher,
+        target=target,
         environment=environment,
-        cwd=work,
-        label=f"{host} image artifact task",
-        timeout=600,
+        work=work,
+        host=host,
+        conversation_id=stream_result["conversation_id"],
     )
-    image_result = _parse_finished_for(image_stream.stdout, f"{host} image artifact task")
-    if image_result["conversation_id"] != stream_result["conversation_id"]:
-        raise ValueError(f"{host} image artifact task changed the conversation")
-    image_content_id = extract_image_artifact(image_stream.stdout)
-
-    preview = _envelope_data(
-        _run(
-            launcher_command(
-                launcher,
-                target,
-                [
-                    "--json",
-                    "artifact",
-                    "preview",
-                    "--media-type",
-                    "image",
-                    "--content-id",
-                    image_content_id,
-                ],
-            ),
-            environment=environment,
-            cwd=work,
-            label=f"{host} artifact preview",
-            timeout=300,
-        ),
-        f"{host} artifact preview",
-    )
-    preview_bytes, preview_content_type, preview_path = validate_artifact_file(preview)
-    if not preview_path.parent.name.startswith("vivago-agent-preview-"):
-        raise ValueError(f"{host} artifact preview used an unexpected directory")
-    shutil.rmtree(preview_path.parent)
-
-    download_path = work / "hosted-l3-generated.png"
-    downloaded = _envelope_data(
-        _run(
-            launcher_command(
-                launcher,
-                target,
-                [
-                    "--json",
-                    "artifact",
-                    "download",
-                    "--media-type",
-                    "image",
-                    "--content-id",
-                    image_content_id,
-                    "--output",
-                    str(download_path),
-                ],
-            ),
-            environment=environment,
-            cwd=work,
-            label=f"{host} artifact download",
-            timeout=300,
-        ),
-        f"{host} artifact download",
-    )
-    download_bytes, download_content_type, _ = validate_artifact_file(
-        downloaded,
-        download_path,
-    )
-    if preview_content_type != download_content_type or preview_bytes != download_bytes:
-        raise ValueError(f"{host} preview and download returned different artifacts")
 
     cancelled_result = _cancel_active_stream(
         launcher_command(
@@ -1224,6 +1335,8 @@ def _run_host_case(
         work,
         host_root,
         version,
+        contract["plugin_id"],
+        contract["marketplace"],
     )
     if restarted_installed != installed:
         raise ValueError(f"{host} restart resolved a different plugin installation")
@@ -1287,6 +1400,7 @@ def verify(args: argparse.Namespace) -> dict[str, Any]:
     target = detect_native_target()
     if target != args.expected_target:
         raise ValueError("runner target does not match the requested target")
+    contract = profile_contract(args.expected_profile)
     plugin = args.marketplace / "plugins" / PLUGIN_NAME
     version = (plugin / "VERSION").read_text(encoding="utf-8").strip()
     build_info = json.loads((plugin / "BUILD_INFO.json").read_text(encoding="utf-8"))
@@ -1294,8 +1408,11 @@ def verify(args: argparse.Namespace) -> dict[str, Any]:
         raise ValueError("Marketplace version does not match")
     if str(build_info.get("source_revision", "")).lower() != args.source_revision.lower():
         raise ValueError("Marketplace source revision does not match")
-    if build_info.get("profile") != "dev" or build_info.get("channel") != "dev":
-        raise ValueError("Marketplace is not a development build")
+    if (
+        build_info.get("profile") != contract["profile"]
+        or build_info.get("channel") != contract["channel"]
+    ):
+        raise ValueError("Marketplace does not match the expected profile")
 
     args.report.parent.mkdir(parents=True, exist_ok=True)
     root = args.report.parent / f"runtime-{target}"
@@ -1311,20 +1428,24 @@ def verify(args: argparse.Namespace) -> dict[str, Any]:
                 version=version,
                 run_id=args.run_id,
                 root=root,
+                contract=contract,
+                scope=args.scope,
             )
-            for host in HOSTS
+            for host in args.hosts
         ]
     except Exception:
         raise
     else:
         shutil.rmtree(root)
+    if contract["profile"] == "prod":
+        cases = [sanitize_production_case(case) for case in cases]
     report = {
         "ok": True,
         "target": target,
         "version": version,
         "source_revision": args.source_revision.lower(),
-        "profile": "dev",
-        "environment": "overseas-test",
+        "profile": contract["profile"],
+        "environment": contract["environment"],
         "authentication_scope": "one-time-access-only",
         "cases": cases,
     }

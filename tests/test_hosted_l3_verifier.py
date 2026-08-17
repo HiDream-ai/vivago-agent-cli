@@ -21,6 +21,64 @@ def _load_module():
 
 
 class HostedL3VerifierTests(unittest.TestCase):
+    def test_profile_contracts_are_fixed_and_environment_specific(self) -> None:
+        verifier = _load_module()
+
+        self.assertEqual(
+            verifier.profile_contract("dev"),
+            {
+                "profile": "dev",
+                "channel": "dev",
+                "environment": "overseas-test",
+                "marketplace": "vivago-dev",
+                "plugin_id": "vivago-agent-cli@vivago-dev",
+                "web_host": "dev.vivago.ai",
+            },
+        )
+        self.assertEqual(
+            verifier.profile_contract("prod"),
+            {
+                "profile": "prod",
+                "channel": "beta",
+                "environment": "overseas-production",
+                "marketplace": "vivago",
+                "plugin_id": "vivago-agent-cli@vivago",
+                "web_host": "vivago.ai",
+            },
+        )
+        with self.assertRaisesRegex(ValueError, "unsupported profile"):
+            verifier.profile_contract("staging")
+
+    def test_arguments_can_select_production_codex_attachment_scope(self) -> None:
+        verifier = _load_module()
+
+        args = verifier.arguments(
+            [
+                "--marketplace",
+                "/tmp/marketplace",
+                "--expected-target",
+                "darwin-arm64",
+                "--expected-version",
+                "0.3.0-beta.1",
+                "--source-revision",
+                "a" * 40,
+                "--run-id",
+                "123",
+                "--report",
+                "/tmp/report.json",
+                "--expected-profile",
+                "prod",
+                "--host",
+                "codex",
+                "--scope",
+                "attachment-artifact",
+            ]
+        )
+
+        self.assertEqual(args.expected_profile, "prod")
+        self.assertEqual(args.hosts, ["codex"])
+        self.assertEqual(args.scope, "attachment-artifact")
+
     def test_supported_targets_and_hosts_match_public_beta_matrix(self) -> None:
         verifier = _load_module()
 
@@ -255,7 +313,7 @@ class HostedL3VerifierTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "invalid conversation identifier"):
             verifier.parse_stream_checkpoint(unsafe)
 
-    def test_project_link_check_requires_compiled_development_origin(self) -> None:
+    def test_project_link_check_requires_compiled_profile_origin(self) -> None:
         verifier = _load_module()
 
         host = verifier.validate_project_link(
@@ -270,6 +328,7 @@ class HostedL3VerifierTests(unittest.TestCase):
             },
             "project-safe",
             "conversation-safe",
+            "dev",
         )
 
         self.assertEqual(host, "dev.vivago.ai")
@@ -286,7 +345,57 @@ class HostedL3VerifierTests(unittest.TestCase):
                 },
                 "project-safe",
                 "conversation-safe",
+                "dev",
             )
+
+        self.assertEqual(
+            verifier.validate_project_link(
+                {
+                    "profile": "prod",
+                    "project_id": "project-safe",
+                    "conversation_id": "conversation-safe",
+                    "deep_link": (
+                        "https://vivago.ai/agent/new-chat?"
+                        "conversation_id=conversation-safe&project_id=project-safe"
+                    ),
+                },
+                "project-safe",
+                "conversation-safe",
+                "prod",
+            ),
+            "vivago.ai",
+        )
+
+    def test_production_report_removes_service_identifiers(self) -> None:
+        verifier = _load_module()
+        case = {
+            "host": "codex",
+            "plugin_version": "0.3.0-beta.1",
+            "credential_backend": "keychain",
+            "project_id": "project-secret",
+            "conversation_id": "conversation-secret",
+            "turn_id": "turn-secret",
+            "last_event_id": "cursor-secret",
+            "artifact_turn_id": "artifact-turn-secret",
+            "artifact_bytes": 1024,
+            "artifact_content_type": "image/png",
+            "checks": {"attachment": "PASS", "artifact_preview_download": "PASS"},
+        }
+
+        sanitized = verifier.sanitize_production_case(case)
+
+        self.assertEqual(
+            sanitized,
+            {
+                "host": "codex",
+                "plugin_version": "0.3.0-beta.1",
+                "credential_backend": "keychain",
+                "artifact_bytes": 1024,
+                "artifact_content_type": "image/png",
+                "checks": {"attachment": "PASS", "artifact_preview_download": "PASS"},
+            },
+        )
+        self.assertNotRegex(json.dumps(sanitized), r"project-secret|conversation-secret|turn-secret|cursor-secret")
 
     def test_extract_image_artifact_requires_verified_succeeded_tool_result(self) -> None:
         verifier = _load_module()

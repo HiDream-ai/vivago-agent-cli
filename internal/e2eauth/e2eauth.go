@@ -17,6 +17,7 @@ const DisabledRefreshToken = "ci-ticket-only-refresh-disabled"
 var ErrCredentialNotUsable = errors.New("one-time credential is missing, invalid, or expires too soon")
 
 type SeedOptions struct {
+	Profile         string
 	Ticket          string
 	Platform        string
 	ConfigDirectory string
@@ -26,6 +27,7 @@ type SeedOptions struct {
 }
 
 type LoadOptions struct {
+	Profile         string
 	Platform        string
 	ConfigDirectory string
 	SystemKeyring   auth.SystemKeyring
@@ -39,6 +41,7 @@ func Seed(ctx context.Context, options SeedOptions) (string, error) {
 	}
 	store, err := credentialStore(
 		ctx,
+		options.Profile,
 		options.Platform,
 		options.ConfigDirectory,
 		options.SystemKeyring,
@@ -58,6 +61,7 @@ func Seed(ctx context.Context, options SeedOptions) (string, error) {
 func LoadFreshTicket(ctx context.Context, options LoadOptions) (string, string, error) {
 	store, err := credentialStore(
 		ctx,
+		options.Profile,
 		options.Platform,
 		options.ConfigDirectory,
 		options.SystemKeyring,
@@ -81,11 +85,12 @@ func LoadFreshTicket(ctx context.Context, options LoadOptions) (string, string, 
 
 func Clear(
 	ctx context.Context,
+	profile string,
 	platform string,
 	configDirectory string,
 	systemKeyring auth.SystemKeyring,
 ) (string, error) {
-	store, err := credentialStore(ctx, platform, configDirectory, systemKeyring)
+	store, err := credentialStore(ctx, profile, platform, configDirectory, systemKeyring)
 	if err != nil {
 		return "", err
 	}
@@ -121,11 +126,12 @@ func validateTicket(ticket string, now time.Time, minimumValidity time.Duration)
 
 func credentialStore(
 	ctx context.Context,
+	buildProfile string,
 	platform string,
 	configDirectory string,
 	systemKeyring auth.SystemKeyring,
 ) (auth.CredentialStore, error) {
-	profile, err := auth.ResolveCredentialProfile("dev", configDirectory)
+	profile, err := auth.ResolveCredentialProfile(buildProfile, configDirectory)
 	if err != nil {
 		return nil, err
 	}

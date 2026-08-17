@@ -49,7 +49,10 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 }
 
 func runClear(ctx context.Context, args []string, stdout io.Writer) error {
-	if len(args) != 0 {
+	flags := flag.NewFlagSet("clear", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	profile := flags.String("profile", "dev", "credential profile")
+	if flags.Parse(args) != nil || flags.NArg() != 0 || !validProfile(*profile) {
 		return fmt.Errorf("invalid clear arguments")
 	}
 	configDirectory, err := os.UserConfigDir()
@@ -58,6 +61,7 @@ func runClear(ctx context.Context, args []string, stdout io.Writer) error {
 	}
 	backend, err := e2eauth.Clear(
 		ctx,
+		*profile,
 		runtime.GOOS,
 		configDirectory,
 		auth.NewPlatformSystemKeyring(),
@@ -75,8 +79,9 @@ func runClear(ctx context.Context, args []string, stdout io.Writer) error {
 func runSeed(ctx context.Context, args []string, stdout io.Writer) error {
 	flags := flag.NewFlagSet("seed", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
+	profile := flags.String("profile", "dev", "credential profile")
 	minimumValidity := flags.Duration("minimum-validity", 20*time.Minute, "minimum remaining validity")
-	if flags.Parse(args) != nil || flags.NArg() != 0 {
+	if flags.Parse(args) != nil || flags.NArg() != 0 || !validProfile(*profile) {
 		return fmt.Errorf("invalid seed arguments")
 	}
 	configDirectory, err := os.UserConfigDir()
@@ -84,6 +89,7 @@ func runSeed(ctx context.Context, args []string, stdout io.Writer) error {
 		return fmt.Errorf("resolve config directory")
 	}
 	backend, err := e2eauth.Seed(ctx, e2eauth.SeedOptions{
+		Profile:         *profile,
 		Ticket:          os.Getenv(environmentVariable),
 		Platform:        runtime.GOOS,
 		ConfigDirectory: configDirectory,
@@ -106,11 +112,13 @@ func runPublish(ctx context.Context, args []string, stdout io.Writer) error {
 	repository := flags.String("repo", "", "GitHub owner/repository")
 	environment := flags.String("environment", "", "GitHub Environment name")
 	secretName := flags.String("secret-name", environmentVariable, "GitHub Environment secret name")
+	profile := flags.String("profile", "dev", "credential profile")
 	minimumValidity := flags.Duration("minimum-validity", 45*time.Minute, "minimum remaining validity")
 	if flags.Parse(args) != nil || flags.NArg() != 0 ||
 		!repositoryPattern.MatchString(*repository) ||
 		!environmentPattern.MatchString(*environment) ||
-		!secretPattern.MatchString(*secretName) {
+		!secretPattern.MatchString(*secretName) ||
+		!validProfile(*profile) {
 		return fmt.Errorf("invalid publish arguments")
 	}
 	configDirectory, err := os.UserConfigDir()
@@ -118,6 +126,7 @@ func runPublish(ctx context.Context, args []string, stdout io.Writer) error {
 		return fmt.Errorf("resolve config directory")
 	}
 	ticket, backend, err := e2eauth.LoadFreshTicket(ctx, e2eauth.LoadOptions{
+		Profile:         *profile,
 		Platform:        runtime.GOOS,
 		ConfigDirectory: configDirectory,
 		SystemKeyring:   auth.NewPlatformSystemKeyring(),
@@ -148,4 +157,8 @@ func runPublish(ctx context.Context, args []string, stdout io.Writer) error {
 		"backend":                  backend,
 		"minimum_validity_seconds": int64(minimumValidity.Seconds()),
 	})
+}
+
+func validProfile(profile string) bool {
+	return profile == "dev" || profile == "prod"
 }

@@ -241,6 +241,38 @@ class GitHubWorkflowContractTests(unittest.TestCase):
         for reference in action_refs:
             self.assertRegex(reference, r"^[0-9a-f]{40}$")
 
+    def test_production_attachment_smoke_is_manual_company_main_codex_only(self) -> None:
+        text = _workflow("production-attachment-smoke.yml")
+
+        self.assertRegex(text, r"(?m)^on:\n  workflow_dispatch:\s*$")
+        self.assertNotRegex(text, r"(?m)^  (push|pull_request):")
+        self.assertIn("github.repository == 'HiDream-ai/vivago-agent-cli'", text)
+        self.assertIn("github.ref == 'refs/heads/main'", text)
+        self.assertRegex(text, r"(?m)^permissions:\n  contents: read\s*$")
+        self.assertIn("runs-on: macos-26", text)
+        self.assertIn("environment: production-beta", text)
+        self.assertIn("secrets.VIVAGO_E2E_TICKET", text)
+        self.assertIn("vivago-e2e-auth seed --profile prod", text)
+        self.assertIn("vivago-e2e-auth clear --profile prod", text)
+        self.assertIn("scripts/build_beta_binaries.py", text)
+        self.assertIn("scripts/assemble_beta_distribution.py", text)
+        self.assertIn("scripts/verify_beta_distribution.py", text)
+        self.assertIn("scripts/verify_hosted_l3.py", text)
+        self.assertIn("--expected-profile prod", text)
+        self.assertIn("--host codex", text)
+        self.assertIn("--scope attachment-artifact", text)
+        self.assertIn("@openai/codex@0.147.0", text)
+        self.assertNotIn("claude-code", text.lower())
+        self.assertNotIn("REFRESH_TOKEN", text)
+        self.assertNotIn("refresh_token", text.lower())
+        for forbidden in ("gh release", "git tag", "HEAD:marketplace", "attest-build-provenance"):
+            self.assertNotIn(forbidden, text)
+
+        action_refs = re.findall(r"uses:\s*[^\s@]+@([^\s#]+)", text)
+        self.assertTrue(action_refs)
+        for reference in action_refs:
+            self.assertRegex(reference, r"^[0-9a-f]{40}$")
+
     def test_beta_check_is_company_only_read_only_and_builds_production_package(self) -> None:
         text = _workflow("beta-check.yml")
 

@@ -1,0 +1,121 @@
+name: Production Attachment Smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Production Beta version without the v prefix
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vivago-production-attachment-smoke
+  cancel-in-progress: false
+
+jobs:
+  production-attachment-smoke:
+    name: Production attachment and artifact smoke (darwin-arm64, Codex)
+    if: github.repository == 'HiDream-ai/vivago-agent-cli' && github.ref == 'refs/heads/main'
+    environment: production-beta
+    runs-on: macos-26
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    env:
+      GOCACHE: ${{ github.workspace }}/.ci-production-attachment/go-cache
+      SMOKE_ROOT: ${{ github.workspace }}/.ci-production-attachment
+      BETA_VERSION: ${{ inputs.version }}
+    steps:
+      - name: Check out exact company-main source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: 1.25.12
+          cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+
+      - name: Validate the fixed production release boundary
+        run: |
+          set -euo pipefail
+          python scripts/validate_beta_release_policy.py \
+            --version "${BETA_VERSION}" \
+            --repository "${{ github.repository }}" \
+            --ref "${{ github.ref }}" \
+            --source-revision "${GITHUB_SHA}"
+
+      - name: Build six production Beta binaries
+        run: |
+          set -euo pipefail
+          python scripts/build_beta_binaries.py \
+            --output "${SMOKE_ROOT}/binaries" \
+            --version "${BETA_VERSION}" \
+            --source-revision "${GITHUB_SHA}"
+
+      - name: Assemble the production Marketplace
+        run: |
+          set -euo pipefail
+          python scripts/assemble_beta_distribution.py \
+            --plugin-template plugin \
+            --binary-root "${SMOKE_ROOT}/binaries" \
+            --output "${SMOKE_ROOT}/marketplace" \
+            --version "${BETA_VERSION}" \
+            --source-revision "${GITHUB_SHA}"
+
+      - name: Verify production provenance and environment boundary
+        run: |
+          set -euo pipefail
+          python scripts/verify_beta_distribution.py \
+            --marketplace "${SMOKE_ROOT}/marketplace" \
+            --version "${BETA_VERSION}" \
+            --source-revision "${GITHUB_SHA}"
+
+      - name: Install pinned Codex host
+        run: npm install --global "@openai/codex@0.147.0"
+
+      - name: Seed short-lived production access without refresh capability
+        env:
+          VIVAGO_E2E_TICKET: ${{ secrets.VIVAGO_E2E_TICKET }}
+        run: go run ./cmd/vivago-e2e-auth seed --profile prod --minimum-validity 30m
+
+      - name: Run production attachment and artifact checks
+        run: |
+          set -euo pipefail
+          python scripts/verify_hosted_l3.py \
+            --marketplace "${SMOKE_ROOT}/marketplace" \
+            --expected-target darwin-arm64 \
+            --expected-version "${BETA_VERSION}" \
+            --source-revision "${GITHUB_SHA}" \
+            --run-id "${{ github.run_id }}" \
+            --report "${SMOKE_ROOT}/reports/production-attachment-darwin-arm64-codex.json" \
+            --expected-profile prod \
+            --host codex \
+            --scope attachment-artifact
+
+      - name: Clear the runner production credential
+        if: always()
+        run: go run ./cmd/vivago-e2e-auth clear --profile prod
+
+      - name: Upload sanitized production smoke report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: production-attachment-darwin-arm64-codex-${{ github.sha }}
+          path: ${{ github.workspace }}/.ci-production-attachment/reports/production-attachment-darwin-arm64-codex.json
+          if-no-files-found: warn
+          retention-days: 14

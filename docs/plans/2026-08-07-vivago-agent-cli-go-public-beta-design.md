@@ -6,6 +6,8 @@
 [`2026-08-11-vivago-agent-cli-public-beta-release-design.md`](2026-08-11-vivago-agent-cli-public-beta-release-design.md)。
 前端登录页的参数、Form POST 和联调范围见
 [`2026-08-07-vivago-agent-login-frontend-integration.md`](2026-08-07-vivago-agent-login-frontend-integration.md)。
+生产附件和产物的独立 Hosted Runner 验证设计见
+[`2026-08-17-vivago-agent-cli-production-attachment-smoke-design.md`](2026-08-17-vivago-agent-cli-production-attachment-smoke-design.md)。
 
 ## 背景
 
@@ -58,6 +60,13 @@ Codex / Claude Code
 权限、手动 `workflow_dispatch`、仓库/分支/版本硬校验共同承担人工授权；仓库公开或套餐升级后补
 至少一名 Environment reviewer。两条 Release Workflow 都不提供 profile、环境地址、Marketplace
 名称或 channel 输入，仓库身份不匹配时直接失败。
+
+生产附件验收使用独立、只读、手动触发的 `production-attachment-smoke.yml`，不把个人仓库的
+海外测试 `hosted-l3.yml` 改造成可切换环境入口。该 Workflow 只允许公司 `main`，在
+`production-beta` Environment 中使用短期 ticket-only Secret，从准确 SHA 重建 `prod` Beta
+Marketplace，并只运行 macOS ARM64/Codex 的附件识别、图片生成、预览和下载。本入口不创建 Tag、
+Release、attestation 或 Marketplace 提交。验证结束后必须删除 GitHub Environment Secret；Runner
+凭证在 `always()` 清理步骤中删除。普通开源用户只能看到 Secret 名称，不能读取 Secret 值。
 
 同一份源码保留两套构建配置，不提供运行时 `--env`：
 
