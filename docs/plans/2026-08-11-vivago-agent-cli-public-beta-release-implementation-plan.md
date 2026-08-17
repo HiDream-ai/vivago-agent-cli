@@ -24,7 +24,7 @@ Workflow。公司 GitHub PR #1 的 Beta Check（run `31481271742`）已经完成
 | L0 静态与构建 | 本地 Python 114/114；Go default/prod/race/vet；公司 PR #1 Hosted Runner 全部通过；含 Dev/Beta 产物一致性与 profile 结构门禁 | 已完成 |
 | L1 原生启动 | 公司 PR #1 Hosted Runner 六平台 6/6 通过 | 已完成 |
 | L2 宿主生命周期 | 公司 PR #1 Hosted Runner 六平台 × Codex/Claude Code 12/12 通过，覆盖安装、升级、回滚、再升级 | 已完成 |
-| L3 海外生产 | 登录前检查通过；真实登录为 `BLOCKED/ENV`，生产 `/agent/login` 尚未部署 | 入口部署后重跑登录，再执行受控账号代表平台 6 个组合 |
+| L3 海外生产 | macOS ARM64 代表平台已完成登录、刷新、退出重登、Codex 任务、Web 可见性、SSE 恢复、附件和产物验证 | 代理兼容提交进入公司 `main` 后，在准确候选 SHA 上复核 Beta Check；六平台真人登录不作为首个 Beta 阻断项 |
 | 发布治理 | LICENSE、NOTICE、第三方声明、SECURITY、CODEOWNERS、SBOM 与 attestation 已完成 | 公司法定版权主体复核、公司仓库保护规则 |
 | 发布恢复 | 同版本、同 SHA、同资产摘要可续跑；旧任务和冲突制品失败关闭 | 公司仓库首次真实演练 |
 | Manifest、Skill 与渠道一致性 | 源码模板已中性化；Dev/Beta 显示名、命令与插件文件保持一致；Beta 双 manifest、Skill 开发字样门禁和逐文件一致性测试均已通过公司 PR CI | 已完成 |
@@ -43,7 +43,8 @@ Workflow。公司 GitHub PR #1 的 Beta Check（run `31481271742`）已经完成
 | Codex 0.147.0 | PASS | 安装、升级、回滚、再升级全部通过，隔离配置中未登录 |
 | Claude Code 2.1.220 | PASS | 安装、升级、回滚、再升级全部通过，隔离配置中未登录 |
 | 海外生产登录前检查 | PASS | 精确生产构建、生产域名、macOS Keychain 和初始未登录状态均符合预期 |
-| 海外生产真实登录 | BLOCKED | 生产 `/agent/login` 尚未部署；等待进程已取消，未保存生产凭证，未调用业务 API |
+| 海外生产真实登录 | PASS | 生产 `/agent/login`、随机 loopback Form POST 回调、Keychain 保存、刷新、退出和重登均通过 |
+| 本机生产附件与产物 | PASS | 标准环境代理兼容提交配合本机对象存储精确直连规则，完成附件上传、SSE、图片生成、preview/download；本机 Clash 规则不进入发布包 |
 | 海外测试 dev.8 鉴权闭环 | PASS | Keychain refresh、logout、浏览器 loopback 重登均通过，没有打印凭据 |
 | Codex 自然语言选择 Skill | PASS | 全新模型会话主动选择 dev.8 插件并完成一条低成本文本任务 |
 | Web 可见性 | PASS | CLI 创建的项目、用户请求和 VivagoAgent 回复可在海外测试 Web 页面打开 |
@@ -54,7 +55,8 @@ Workflow。公司 GitHub PR #1 的 Beta Check（run `31481271742`）已经完成
 | --- | --- | --- | --- |
 | L1 本机真实包 | 原生门禁错误报告“不是海外生产 profile” | 校验器误用凭证账户名 `overseas-prod` 作为 doctor 环境 target；真实 CLI 固定返回 `overseas-production` | 校验器和测试统一到 `overseas-production`；凭证账户名保持不变 |
 | 本机固定宿主验证 | 系统现有 Codex/Claude Code 版本与 CI 固定版本不同 | 本机日常安装版本不等于发布矩阵版本 | 仅在临时目录安装固定版本，不修改用户全局宿主 |
-| L3 生产登录 | 网页进入现有生产站内页面，但 CLI 未收到 loopback 回调 | 用户确认生产 `/agent/login` 尚未部署，不属于已部署功能回归失败 | 标记 `BLOCKED/ENV` 并暂停生产鉴权测试；入口部署后从首次未登录用例重新执行 |
+| L3 生产登录 | 早期网页进入生产站内页面，但 CLI 未收到 loopback 回调 | 当时生产 `/agent/login` 尚未部署 | 页面上线后从首次未登录重新执行，登录、刷新、退出和重登均已通过 |
+| 本机生产附件 | API 正常，但对象存储上传在 TLS 阶段关闭 | Clash 的 Google 通用规则把对象存储送入代理节点；全局直连又会中断 Codex | CLI 保留标准环境代理兼容；本机仅给对象存储域名增加精确直连规则，完整生产 E2E 已通过 |
 | L2 Windows Hosted Runner | GNU tar 报 `Cannot connect to C:/D:`，四个宿主组合全部在解包前失败 | Git Bash 下 GNU tar 把 Windows 盘符冒号解释为远程归档语法 | Dev/Beta Release 和 Beta Check 统一改用 `python -m tarfile -e`；PR #1 Windows 四个宿主组合 4/4 通过 |
 | Dev/Beta 产品一致性 | 生产包曾禁用手动 `auth refresh`，个人 Marketplace 描述带 Development | profile 中混入了功能开关，组装器各自维护用户文案 | 删除 profile 功能开关，两种构建均支持同一命令；中性化文案并新增归一化逐文件产物对比 |
 

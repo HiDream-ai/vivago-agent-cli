@@ -13,9 +13,9 @@
 当前可以确认：`dev.8` 的六平台构建、原生 CLI 和 Codex/Claude Code 插件生命周期已经跑通；此前 ticket-only 在线业务验证仍为 12/12。macOS ARM64 还补齐了真实登录、刷新、退出、重登、Codex 自然语言选择 Skill，以及 CLI 项目在 Web 页面可见性。
 
 这还不是“完整公开 Beta 发布完成”。生产 `/agent/login` 已上线，生产登录/刷新/退出/重登、Codex
-代表平台文本任务、Web 可见性、SSE 断流恢复以及 Hosted Runner 附件/产物闭环均已通过。尚未执行
-生产候选回滚演练、公司仓库公开和 Beta Release 发布。本轮按用户决定不验证 Claude Code 模型主动
-选择 Skill。
+代表平台文本任务、Web 可见性、SSE 断流恢复、Hosted Runner 附件/产物闭环，以及当前 Mac 的
+标准环境代理兼容验证均已通过。尚未执行生产候选回滚演练、公司仓库公开和 Beta Release 发布。
+本轮按用户决定不验证 Claude Code 模型主动选择 Skill。
 
 ## 当前进度总表
 
@@ -82,7 +82,7 @@
 | Codex 选择生产插件 | PASS | 隔离 Codex 安装 `vivago-agent-cli@vivago`，完成一条低成本文本 Turn；没有直调业务 API |
 | Web 可见性 | PASS | 生产 CLI 创建的项目、请求和回复可在 `vivago.ai` 打开 |
 | SSE 断流恢复 | PASS | 在非终态事件后断开，使用同一 Turn 和 cursor 恢复；13 个后续事件、0 个重复事件 ID、1 个 `RUN_FINISHED`，没有重发 prompt |
-| 本机附件上传 | BLOCKED/ENV | Dev/Prod 返回相同上传 Host，当前 Mac 安全直连均失败；原因是本机网络/VPN/代理出口，不是 profile 或服务端差异 |
+| 本机附件上传 | PASS | `prod` 构建通过标准环境代理兼容代码完成附件上传、服务端读取、图片生成和 `RUN_FINISHED`；本机 Clash 仅对对象存储域名增加精确直连规则，其他流量仍按原规则代理 |
 | Hosted Runner 生产附件 | PASS | 公司 Run `32024362266` 的 macOS ARM64/Codex 识别红绿蓝测试图，证明生产上传凭证和对象存储公网路径可用 |
 | 图片生成 | PASS | 同一生产会话生成一张图片并返回已验证产物 |
 | 产物预览与下载 | PASS | preview/download 内容一致；脱敏报告记录 `image/jpeg`、447040 字节，不记录对象标识或 URL |
@@ -90,13 +90,21 @@
 | Claude Code 模型调用 | 本轮不验 | 用户明确移出本轮；L2 插件安装生命周期证据仍为 12/12 |
 | Beta 发布 | 未执行 | 该 Workflow 只有 `contents: read`，不会创建 Tag、Release、attestation 或更新 Marketplace |
 
-### 本机上传阻断与 Hosted Runner 结论
+### 本机上传问题与最终处理
 
-历史海外测试本机附件成功和 Hosted Runner Dev 12/12 均是真实结果。2026-08-17 的隐私安全对比证明
-Dev/Prod 当前返回同一上传 Host，但这台 Mac 的安全直连 PUT 两边都失败；代理尝试也不稳定，不能据此
-放宽上传器的 SSRF 防护。公司 GitHub 原生 macOS ARM64 Runner 随后对生产环境完成附件和产物闭环，
-因此当前结论是：生产服务和标准公网直连路径可用，本机失败属于当前网络出口阻断。代理网络兼容性
-作为后续兼容项保留，不是本次生产服务失败。
+历史海外测试本机附件成功、Hosted Runner Dev 12/12 和公司 macOS ARM64 生产附件冒烟都是真实
+结果。2026-08-17 的对比还证明 Dev/Prod 返回同一上传 Host，服务端生产上传凭证和对象存储公网路径
+可用，因此没有放宽上传器的 SSRF、重定向和公网 DNS 校验。
+
+本机后续定位到两个独立问题。第一，普通 API 已支持 `http.ProxyFromEnvironment`，但附件上传和产物
+下载原先固定 `Proxy: nil`，只配置 `HTTP_PROXY`/`HTTPS_PROXY`、没有 TUN 的用户会出现 API 可用而
+附件失败。提交 `5754da9` 已让 API、上传和下载统一兼容标准环境代理，同时保留原安全检查。
+
+第二，这台 Mac 的 Clash 把 `storage.googleapis.com` 命中 Google 通用代理规则，两个代理节点都在 TLS
+阶段关闭连接。全局直连虽然能访问对象存储，却会中断 Codex，因此最终只在本机增加精确的对象存储
+直连规则，其他流量继续走原代理。使用 `-tags prod` 构建的当前 CLI 随后完成附件上传、服务端读取、
+SSE、图片生成、`RUN_FINISHED`、preview 和 download；预览与下载字节数一致且文件非空。该 Clash
+规则是本机网络配置，不进入插件源码或公开 Beta 包。
 
 ## 2026-08-11 dev.8 发布前收口
 
@@ -308,21 +316,23 @@ L2 不调用 Codex 或 Claude 模型。它证明的是官方插件命令能安�
 
 | 优先级 | 工作 | 当前状态 | 预计工作量 | 前置依赖 | 验收标准 | 是否需要你介入 |
 | --- | --- | --- | ---: | --- | --- | --- |
+| P0 | 代理兼容提交进入公司 `main` | 本地 `main` 已完成实现和生产 E2E，等待推送 | 0.25 天 | 完整本地门禁 | 公司 Beta Check 在准确 SHA 上通过 | 无 |
 | P0 | 海外测试登录、刷新、退出重登 | macOS ARM64 PASS | 其余平台按风险决定是否扩展 | dev.8、海外测试账号 | 当前代表平台流程已闭环 | 当前无需介入 |
 | P0 | 宿主模型主动选择 Skill | Codex PASS；Claude Code 本轮移除 | Claude 后续如恢复范围约 0.25 天 | 可用宿主账号 | 自然语言触发、模型主动加载 Skill，不手工执行 launcher | 本轮不需要 |
 | P0 | `source/platform` 数据库持久化 | 服务端研发确认完成；日志与 Web 证据已具备，未直接查测试库字段 | 只读补证约 0.25 天，可后置 | 海外测试 Mongo 只读目标 | 精确核对三类对象的 `source=cli` | 需要协调只读权限时再介入 |
 | P0 | Web 页面可见性 | PASS | 已完成 | 海外测试 Web 登录 | CLI 项目、请求和回复可在 Web 打开 | 无 |
-| P1 | 公司 GitHub Beta 流水线 | 已完成 | 发布前只需复核真实运行参数 | 生产登录上线 | 公司 CI 使用 prod profile、checksum、SBOM、attestation，只允许公司 main 手动发布 | 发布时需要最终确认 |
+| P1 | 公司 GitHub Beta 流水线 | 已完成 | 新提交推送后重跑一次 | 代理兼容提交进入公司 `main` | prod profile、checksum、SBOM、attestation、六平台和双宿主门禁全部通过 | 发布时需要最终确认 |
 | P1 | `production-beta` 发布边界 | Environment 与 main 限制已完成；reviewer 受 GitHub 套餐限制 | 仓库公开或套餐升级后约 0.25 天补 reviewer | GitHub 计划支持 | Environment 至少一名 reviewer | 届时需要管理员配置/确认 |
-| P1 | 海外正式环境受控 Beta | BLOCKED/ENV | 入口上线后 0.5–1 天 | 生产 `/agent/login`、海外正式测试账号 | 完成首次登录、刷新、退出重登和代表平台 L3 | 登录或验证码时需要介入 |
+| P1 | 海外正式环境受控 Beta | 代表平台 PASS | 发布前只需复核准确候选 SHA | 公司 Beta Check | 登录、刷新、退出重登、任务、SSE、附件和产物均通过 | 发布时需要最终确认 |
+| P1 | 回滚与停止发布演练 | 未开始 | 0.5 天 | Beta 候选包、版本阻断和监控能力 | 30 分钟内完成安全版本或 Marketplace 恢复，并能按 `source=cli`/版本观察影响 | 需要服务端和发布人确认 |
 | P2 | macOS 公证、Windows 签名 | 未开始 | 2–5 天 | Apple Developer ID、Windows 代码签名证书 | 安装和首次运行不触发无法解释的 Gatekeeper/SmartScreen 风险 | 需要公司提供证书和签名主体 |
 
 如果只安排下一轮验证，建议顺序是：
 
-1. 等待生产 `/agent/login` 上线。
-2. 使用公司生产 Beta 候选包从首次未登录开始验证登录、刷新、退出和重登。
-3. 再执行海外生产代表平台受控 L3 与回滚演练。
-4. 完成公司法务/治理确认、GitHub reviewer 能力确认后，单独审批仓库公开和 `v0.3.0-beta.1` 发布。
+1. 更新验证文档，把代理兼容提交推送到公司、个人和 Codeup 的 `main`。
+2. 等待公司 Beta Check 在新 SHA 上完成 L0、L1、L2 和供应链门禁。
+3. 执行回滚与停止发布演练，确认服务端版本阻断和 `source=cli` 监控。
+4. 完成公司法务/治理确认后，单独审批仓库公开和 `v0.3.0-beta.1` 发布。
 
 ## 哪些结论可以对外说
 
@@ -330,15 +340,16 @@ L2 不调用 Codex 或 Claude 模型。它证明的是官方插件命令能安�
 | --- | --- |
 | 六个平台都能构建并原生运行 CLI | 标准登录已经覆盖六个平台 |
 | Codex/Claude Code 都能安装、升级、回滚插件 | Claude Code 模型会主动选择 Skill（本轮明确未验） |
-| ticket-only 在线任务在 12 个组合全部通过 | 海外生产登录和业务 L3 已经验证 |
+| ticket-only 在线任务在 12 个组合全部通过 | 海外生产标准登录已经覆盖六个平台 |
 | 文本、附件、SSE、图片产物、取消和历史已跑真实海外测试环境 | `source/platform` 已由本轮直接查询数据库证明 |
+| macOS ARM64 已完成生产登录、刷新、退出重登、Codex 任务、SSE 恢复、附件和产物验证 | 生产代表验证等于六平台都完成真人登录和模型调用 |
 | dev.8 在 macOS ARM64 的刷新、退出、重登和 Codex 自然语言调用通过 | `source=cli` 已由本轮直接查询测试数据库证明 |
 | CLI 创建的验证项目和对话可在海外测试 Web 页面打开 | 所有 CLI 项目和所有平台的 Web 可见性均已逐一验证 |
-| dev.8 Release、公司 Beta Check 和报告可追溯 | 公司 GitHub 或海外正式环境 Beta 已经发布 |
+| dev.8 Release、公司 Beta Check、生产附件冒烟和报告可追溯 | 公司 GitHub Beta 已经公开发布 |
 
 当前准确说法是：
 
-> VivagoAgent CLI 的 Dev L0/L1/L2 已完成，ticket-only L3 在六平台 × 两宿主上为 12/12；dev.8 的代表平台登录闭环、Codex 自然语言调用和 Web 可见性也已通过。公司 Beta 构建与发布流水线已就绪但未发布，当前停在等待生产 `/agent/login` 上线。
+> VivagoAgent CLI 的 L0/L1/L2 已完成，ticket-only L3 在六平台 × 两宿主上为 12/12；macOS ARM64 代表平台已完成海外生产登录、Codex 任务、SSE 恢复、附件和产物验证。公司 Beta 构建与发布流水线已就绪但未发布，当前等待新提交的 Beta Check、回滚演练和公开发布审批。
 
 ## 相关提交
 
