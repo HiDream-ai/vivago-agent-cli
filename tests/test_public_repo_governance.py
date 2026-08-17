@@ -16,6 +16,7 @@ class PublicRepositoryGovernanceTests(unittest.TestCase):
             if (
                 not path.is_file()
                 or ".git" in path.parts
+                or ".idea" in path.parts
                 or "build" in path.parts
                 or "__pycache__" in path.parts
                 or ".venv" in path.parts
@@ -76,18 +77,20 @@ class PublicRepositoryGovernanceTests(unittest.TestCase):
 
     def test_public_install_docs_lead_with_company_beta_channel(self) -> None:
         readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+        readme_zh = (REPO_ROOT / "README.zh-CN.md").read_text(encoding="utf-8")
         install_guide = (
             REPO_ROOT / "docs" / "vivago-agent-plugin-product-install-guide.md"
         ).read_text(encoding="utf-8")
         company_repository = "https://github.com/HiDream-ai/vivago-agent-cli.git"
 
-        self.assertIn("## 安装公开 Beta", readme)
-        for document in (readme, install_guide):
+        self.assertIn("## Install the public Beta", readme)
+        self.assertIn("## 安装公开 Beta", readme_zh)
+        for document in (readme, readme_zh, install_guide):
             self.assertIn(company_repository, document)
             self.assertIn("vivago-agent-cli@vivago", document)
             self.assertIn("marketplace upgrade vivago", document)
             self.assertIn("marketplace update vivago", document)
-        for document in (readme, install_guide):
+        for document in (readme, readme_zh, install_guide):
             self.assertNotIn("ChaoXia-Beginer/vivago-agent-cli", document)
             self.assertNotIn("vivago-agent-cli@vivago-dev", document)
             self.assertNotIn("## 维护者：安装 Dev 包", document)
