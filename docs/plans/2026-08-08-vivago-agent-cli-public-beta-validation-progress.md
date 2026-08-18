@@ -9,19 +9,33 @@
 | 首个生产候选 | `0.3.0-beta.1` |
 | 环境 | 海外测试（`profile=dev`）和海外生产（`profile=prod`） |
 | 是否已经公开发布 | **没有** |
-| 当前进行到 | **第 3 步：回滚与停止发布演练** |
+| 当前进行到 | **第 4 步收口：个人 dev CI 验证，等待公司 Beta CI** |
+
+### 2026-08-18 最新状态
+
+VivagoAgent 版本阻断 MR #356 已合并到 `dev`，合并提交为 `8fe5d448…`。海外测试曾临时同步
+功能分支验证 `0.0.0-policy-test`，认证只读请求返回 HTTP 426；CLI 已将该响应显示为稳定的
+`CLI_VERSION_BLOCKED` 升级提示。验证后海外测试环境已恢复原 revision，Argo Health=Healthy；
+没有手动触发新的部署，生产阻断配置仍为空。
+
+CLI 修复已提交到个人 GitHub `main`（`5f75b14`），个人仓库用于开发版本 CI；公司 GitHub 尚未
+接收该提交，因此 Beta Tag、Release 和官方 Beta Marketplace 均尚未创建。
+
+个人 Development CI [#32101640741](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/32101640741)
+已通过：默认/prod/race/vet、分发测试、Codex/Claude 插件校验、六平台开发二进制、Marketplace
+组装、checksum/provenance/环境边界检查和开发产物上传全部成功；Beta Check 按个人仓库策略跳过。
 
 ## 现在到哪一步了
 
-公开 Beta 按五步推进。前两步已经完成，现在正在做第 3 步；仓库公开和 `v0.3.0-beta.1`
+公开 Beta 按五步推进。前 3 步已经完成，现在进入第 4 步收口；仓库公开和 `v0.3.0-beta.1`
 发布还没有开始。
 
 | 步骤 | 要完成的事情 | 当前状态 | 已有证据 | 还差什么 |
 | ---: | --- | --- | --- | --- |
 | 1 | 完成 CLI、插件包、六平台构建和双宿主安装门禁 | **已完成** | L0/L1 为 6/6，L2 为 12/12；`v0.3.0-dev.8` 已发布到个人开发通道 | 无首个 Beta 阻断项 |
 | 2 | 用生产候选完成代表平台验收 | **已完成** | macOS ARM64/Codex 已通过生产登录、刷新、退出重登、任务、SSE、附件、产物和 Web 可见性 | 生产六平台真人登录和 Claude Code 模型调用不在本轮范围 |
-| 3 | 验证出问题后能否安全恢复并停止继续发布 | **服务端实现待合并与演练** | 公司 Beta Check 全绿；真实临时分支演练用 170 秒完成普通快进恢复并自动清理；VivagoAgent 已提交精确版本 denylist 实现 | 合并 VivagoAgent MR，并在海外非生产环境完成一次命中/解除演练 |
-| 4 | 完成公开仓库、法务和发布治理确认 | **未开始** | 公司 Beta Workflow 和 `production-beta` Environment 已准备 | 仓库公开审批、许可证/治理确认；仓库公开或套餐支持后补 required reviewer |
+| 3 | 验证出问题后能否安全恢复并停止继续发布 | **已完成** | 公司 Beta Check 全绿；真实临时分支演练用 170 秒完成普通快进恢复并自动清理；VivagoAgent MR #356 已合并；海外测试命中 HTTP 426 后已恢复 | 生产发布前继续保持阻断配置为空 |
+| 4 | 完成公开仓库、法务和发布治理确认 | **进行中** | 公司 Beta Workflow 和 `production-beta` Environment 已准备；个人 dev CI 通道可用 | 公司 GitHub 同步 CLI 修复、确认许可证/治理和公开仓库审批 |
 | 5 | 发布 `v0.3.0-beta.1` 并观察生产指标 | **未开始** | 发布流水线已经具备生产构建、六平台、双宿主、checksum、SBOM 和 attestation 门禁 | 第 3、4 步通过后，由发布人手动批准 |
 
 ### 第 3 步目前做到哪里
@@ -43,10 +57,10 @@
 - 演练结束后临时分支为 0，正式 `marketplace` 不存在，Tag 和 Release 均为 0；
 - 公司、个人 GitHub 和 Codeup 的 `main` 均已同步到 `41af5bd`。
 
-第 3 步的 GitHub 恢复链路已经验收，服务端责任边界也已确定：由 VivagoAgent 根据
+第 3 步的 GitHub 恢复链路和服务端版本阻断链路已经验收，服务端责任边界也已确定：由 VivagoAgent 根据
 `X-Source: cli` 和 `X-Client-Version` 执行精确版本 denylist，不复用内容投放的
 `delivery_targets`，也不把规则放到 Agent Gateway。下面的完成条件中，前六项已有证据，第七项
-已完成设计和代码提交，待 MR 合并后做海外非生产演练：
+已完成设计、合并和海外非生产命中/恢复演练：
 
 1. 完整 Python 和 Go 回归通过（已完成）；
 2. 实现提交并同步到公司、个人和 Codeup 的 `main`（已完成）；
@@ -55,8 +69,7 @@
 5. 临时分支已删除，正式 Tag、Release 和 `marketplace` 没有变化（已完成）；
 6. 生产结构化日志已经能看到 `source=cli` 和 `client_version`；聚合查询模板已写入运行手册（已完成）；
 7. VivagoAgent 使用 `VIVAGO_CLI_BLOCKED_VERSIONS` 精确阻断高风险 CLI 版本，命中返回 HTTP 426
-   和 `CLI_VERSION_BLOCKED`；清空配置即可解除。实现已提交 VivagoAgent MR #356，待合并和海外
-   非生产演练。
+   和 `CLI_VERSION_BLOCKED`；清空配置即可解除。MR #356 已合并，海外非生产命中和清空恢复已完成。
 
 详细设计和执行步骤见：
 
@@ -68,8 +81,8 @@
 
 | 顺序 | 下一项工作 | 谁处理 | 是否需要你现在介入 |
 | ---: | --- | --- | --- |
-| 1 | 评审并合并 VivagoAgent CLI 版本 denylist MR #356 | VivagoAgent 研发 | 不需要再协调其他负责人 |
-| 2 | 在海外非生产环境写入一个测试版本，验证命中 HTTP 426 后清空配置恢复 | VivagoAgent 与 CLI 开发 | 部署窗口按现有流程执行即可 |
+| 1 | 个人 GitHub dev CI 验证 CLI 修复并生成开发产物 | **已完成**；[Development CI #32101640741](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/32101640741) | 无 |
+| 2 | 将同一 CLI 提交同步到公司 GitHub `main`，运行 Beta Check | CLI 开发/发布人 | 需要公司仓库写权限 |
 | 3 | 发布窗口确认海外生产 Loki stream selector | VivagoAgent 发布执行人 | 发布前确认，不阻塞当前代码开发 |
 | 4 | 审批仓库公开和首个 Beta 发布 | 公司管理员/发布人 | **必须由你或指定发布人确认** |
 
@@ -366,7 +379,7 @@ L2 不调用 Codex 或 Claude 模型。它证明的是官方插件命令能安�
 
 当前本机 Mongo 只读工具只配置了正式库，没有海外测试库目标。为了避免拿测试 ID 查询正式库或临时拼接数据库凭据，本轮没有直接读取海外测试 Mongo。Web 可见性证明 Project、Conversation 和 Turn 由服务端持久化并可被 Web 复用，但不能代替对 `source` 字段值的数据库只读查询。服务端补齐 `Project / Conversation / Turn.source=cli` 及日志、监控、限流统计由服务端研发确认完成。
 
-## 完成第 3 步以后还要做什么
+## 当前 Beta 还要做什么
 
 以下估时只计算开发和验证时间，不包含账号、权限、证书或跨团队排期等待。
 
@@ -380,13 +393,13 @@ L2 不调用 Codex 或 Claude 模型。它证明的是官方插件命令能安�
 | P1 | 公司 GitHub Beta 流水线 | **已完成**；[#32092763621](https://github.com/HiDream-ai/vivago-agent-cli/actions/runs/32092763621) 在 `41af5bd` 全绿 | 已完成 | 回滚演练提交进入公司 `main` | prod profile、checksum、SBOM、attestation、六平台和双宿主门禁全部通过 | 发布时需要最终确认 |
 | P1 | `production-beta` 发布边界 | Environment 与 main 限制已完成；reviewer 受 GitHub 套餐限制 | 仓库公开或套餐升级后约 0.25 天补 reviewer | GitHub 计划支持 | Environment 至少一名 reviewer | 届时需要管理员配置/确认 |
 | P1 | 海外正式环境受控 Beta | 代表平台 PASS | 发布前只需复核准确候选 SHA | 公司 Beta Check | 登录、刷新、退出重登、任务、SSE、附件和产物均通过 | 发布时需要最终确认 |
-| P1 | 回滚与停止发布演练 | **GitHub 侧已完成，服务端实现已提交 MR #356**；真实恢复 170 秒、临时分支已清理、正式对象未变化 | MR 合并后约 0.25 天完成海外非生产命中/解除演练 | VivagoAgent MR 合并和海外非生产部署窗口 | 30 分钟内恢复安装通道；坏版本命中 HTTP 426；清空配置后恢复 | 不需要协调其他负责人 |
+| P1 | 回滚与停止发布演练 | **已完成**；真实恢复 170 秒、临时分支已清理、正式对象未变化；MR #356 已合并，海外非生产命中/恢复已完成 | 已完成 | VivagoAgent MR 合并和海外非生产部署窗口 | 30 分钟内恢复安装通道；坏版本命中 HTTP 426；清空配置后恢复 | 无 |
 | P2 | macOS 公证、Windows 签名 | 未开始 | 2–5 天 | Apple Developer ID、Windows 代码签名证书 | 安装和首次运行不触发无法解释的 Gatekeeper/SmartScreen 风险 | 需要公司提供证书和签名主体 |
 
 下一轮按以下顺序执行：
 
-1. 评审并合并 VivagoAgent MR #356。
-2. 在海外非生产环境完成一次 CLI 版本命中和清空恢复演练。
+1. 验证个人 GitHub `main` 的 dev CI，确认 CLI 修复生成开发产物。
+2. 将同一提交同步到公司 GitHub `main`，运行公司 Beta Check。
 3. 发布窗口由执行人核对海外生产 Loki stream selector 和监控模板字段。
 4. 完成法务和仓库公开审批后，再单独批准 `v0.3.0-beta.1` 发布。
 
@@ -408,7 +421,8 @@ L2 不调用 Codex 或 Claude 模型。它证明的是官方插件命令能安�
 > VivagoAgent CLI 的 L0/L1/L2 已完成，ticket-only L3 在六平台 × 两宿主上为 12/12；macOS ARM64
 > 代表平台已完成海外生产登录、Codex 任务、SSE 恢复、附件和产物验证。第 3 步的 GitHub 回滚
 > 演练已用 170 秒完成安全版本普通快进恢复，临时分支已清理，正式发布对象未变化；VivagoAgent
-> 已提交 CLI 精确版本 denylist 实现，待 MR 合并后完成海外非生产命中/解除演练。仓库尚未公开，
+> 的 CLI 精确版本 denylist 已合并并完成海外非生产命中/解除演练。当前等待个人 dev CI 和公司
+> Beta CI 收口。仓库尚未公开，
 > `v0.3.0-beta.1` 尚未发布。
 
 ## 相关提交
