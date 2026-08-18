@@ -108,3 +108,25 @@ GOCACHE=/tmp/vivago-agent-cli-go-cache go vet ./...
 
 GitHub 演练通过后停止继续操作，向 VivagoAgent 或网关负责人确认 CLI 版本阻断的责任服务、配置
 来源、错误码、回滚方式和测试办法。该确认完成前，第三步不能标记为全部完成。
+
+## 第一轮执行结果
+
+2026-08-18 已完成第一轮真实演练：
+
+| 项目 | 结果 |
+| --- | --- |
+| 演练源码 | `41af5bd033ec30ab8bec66e03c3f54465a56250f` |
+| 安全源码 | `26ed642bdf88855c01fd716f616896e24769bb21` |
+| 模拟问题版本 | `0.3.0-beta.1` |
+| 恢复版本 | `0.3.0-beta.2` |
+| 公司 Beta Check | [#32092763621](https://github.com/HiDream-ai/vivago-agent-cli/actions/runs/32092763621)，PASS |
+| 回滚演练 | [#32093162498](https://github.com/HiDream-ai/vivago-agent-cli/actions/runs/32093162498)，PASS |
+| 恢复耗时 | 170 秒，低于 1800 秒目标 |
+| Git 历史 | 恢复提交父提交等于模拟问题提交，普通快进成立 |
+| 清理 | `cleanup=deleted`，远端 `drill/marketplace-*` 为 0 |
+| 正式对象 | `marketplace` 不存在，Tag 0，Release 0 |
+| 远端同步 | 公司、个人 GitHub 和 Codeup 的 `main` 均为 `41af5bd` |
+
+GitHub 侧验收已完成。当前按计划停在服务端确认点：需要 VivagoAgent 运维负责人确认海外生产
+Loki stream selector，并由 VivagoAgent 或网关负责人确认 CLI 版本阻断的责任服务、配置来源、
+稳定错误码、用户提示、回滚和非生产演练方式。

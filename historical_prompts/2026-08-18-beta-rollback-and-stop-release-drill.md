@@ -22,6 +22,13 @@
 - 运行手册只提供聚合 LogQL 模板，实际海外生产 stream selector 由 VivagoAgent 运维负责人确认，CLI 仓库不硬编码；
 - 服务端版本阻断不在 CLI 仓库中猜测实现，GitHub 演练结束后停下来请 VivagoAgent 或网关负责人确认。
 
+## 执行结果
+
+- 公司 Beta Check 在回滚演练提交上通过；
+- 真实临时分支演练在 30 分钟目标内完成问题版本到安全版本的普通快进恢复；
+- 临时分支已自动删除，正式 Tag、Release 和 Marketplace 未变化；
+- GitHub 侧工作完成后按约定停止，等待服务端负责人确认生产日志 selector 和版本阻断方案。
+
 ## 明确不做
 
 - 不发布 `v0.3.0-beta.1`；
