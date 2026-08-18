@@ -501,7 +501,9 @@ claude plugin install vivago-agent-cli@vivago
 事故恢复不把 `marketplace` 强推回旧提交。发布系统从已验证的安全源码重新构建更高版本，例如用
 `beta.2` 替代有问题的 `beta.1`，再以普通快进提交更新安装通道。首个 Beta 发布前使用公司私有仓库
 的临时 `drill/*` 分支验证这套机制；演练不创建 Tag、Release 或正式 `marketplace`，完成后删除临时
-分支。CLI 版本阻断由 VivagoAgent 或网关负责，具体责任方和配置来源确认前不直接操作生产。
+分支。CLI 版本阻断由 VivagoAgent 负责：海外环境通过 `VIVAGO_CLI_BLOCKED_VERSIONS` 配置完整
+版本号 denylist，只对 `source=cli` 且版本精确命中的请求返回 HTTP 426 和
+`CLI_VERSION_BLOCKED`。清空配置即可解除；正式生产启用前必须先完成海外非生产命中/解除演练。
 
 公开 Beta 暂不把 Apple 公证和 Windows 签名作为发布阻断项，但必须提供 checksum、SBOM、构建来源证明和受保护 Tag。后续扩大到大量普通用户或企业用户前，再补 macOS Developer ID/Notarization 和 Windows Authenticode。
 

@@ -20,18 +20,22 @@
 - 不创建正式 Tag、Release 或 `marketplace`，不修改仓库可见性；
 - 生产日志只做隐私安全的聚合查询，不保存原始业务日志；
 - 运行手册只提供聚合 LogQL 模板，实际海外生产 stream selector 由 VivagoAgent 运维负责人确认，CLI 仓库不硬编码；
-- 服务端版本阻断不在 CLI 仓库中猜测实现，GitHub 演练结束后停下来请 VivagoAgent 或网关负责人确认。
+- 服务端版本阻断不在 CLI 仓库中实现；责任服务确定为 VivagoAgent，不放到 Agent Gateway。
+- VivagoAgent 使用海外环境 ConfigMap 中的完整版本精确 denylist，仅拦截 `source=cli` 的命中版本；
+  命中返回 HTTP 426 和稳定机器码，清空配置即可解除。
 
 ## 执行结果
 
 - 公司 Beta Check 在回滚演练提交上通过；
 - 真实临时分支演练在 30 分钟目标内完成问题版本到安全版本的普通快进恢复；
 - 临时分支已自动删除，正式 Tag、Release 和 Marketplace 未变化；
-- GitHub 侧工作完成后按约定停止，等待服务端负责人确认生产日志 selector 和版本阻断方案。
+- 服务端设计与实现已提交独立 VivagoAgent 合并请求；配置默认空，不会自动影响任何环境。
+- 下一步是 MR 合并后在海外非生产环境完成命中和清空恢复演练；生产日志 selector 在发布窗口核对。
 
 ## 明确不做
 
 - 不发布 `v0.3.0-beta.1`；
 - 不修改生产鉴权、限流或版本阻断配置；
-- 不修改 VivagoAgent、Agent Gateway 或用户中心代码；
+- 不修改 Agent Gateway 或用户中心代码；
+- 不在本次代码交付中部署生产或写入任何真实封禁版本；
 - 不把临时演练分支作为外部安装入口。

@@ -130,8 +130,11 @@ sum by (client_version) (
 
 ## 真实事故时的额外步骤
 
-内部演练通过不等于服务端已经具备版本封禁。真实公开 Beta 前，还需要 VivagoAgent 或网关负责人
-明确版本阻断的责任服务、配置来源、审批与回滚方式、稳定错误码、用户提示和非生产验证办法。
+版本阻断由 VivagoAgent 负责。服务端通过海外环境 ConfigMap 的
+`VIVAGO_CLI_BLOCKED_VERSIONS` 配置完整版本号 denylist，只对 `X-Source: cli` 且
+`X-Client-Version` 精确命中的请求返回 HTTP 426、`CLI_VERSION_BLOCKED` 和升级提示。缺失版本、
+未命中版本及 Web/App 请求继续放行。
 
-在这些信息确认前，只能执行 GitHub 安装通道恢复和聚合观察，不得自行向生产服务写入版本阻断
-规则。
+启用前先在海外非生产环境写入一个测试版本，确认命中后将配置清空并重新发布，验证请求恢复。
+真实事故解除封禁同样通过清空该配置完成。GitHub 安装通道恢复和服务端版本阻断必须分别留证；
+任何演练都不得把真实已发布版本写入生产 denylist。

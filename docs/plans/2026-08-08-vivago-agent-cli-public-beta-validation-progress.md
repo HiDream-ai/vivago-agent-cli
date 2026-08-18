@@ -20,7 +20,7 @@
 | ---: | --- | --- | --- | --- |
 | 1 | 完成 CLI、插件包、六平台构建和双宿主安装门禁 | **已完成** | L0/L1 为 6/6，L2 为 12/12；`v0.3.0-dev.8` 已发布到个人开发通道 | 无首个 Beta 阻断项 |
 | 2 | 用生产候选完成代表平台验收 | **已完成** | macOS ARM64/Codex 已通过生产登录、刷新、退出重登、任务、SSE、附件、产物和 Web 可见性 | 生产六平台真人登录和 Claude Code 模型调用不在本轮范围 |
-| 3 | 验证出问题后能否安全恢复并停止继续发布 | **等待服务端确认** | 公司 Beta Check 全绿；真实临时分支演练用 170 秒完成普通快进恢复并自动清理；正式发布对象未变化 | VivagoAgent/网关负责人确认生产日志 selector、版本阻断责任服务、配置与错误码 |
+| 3 | 验证出问题后能否安全恢复并停止继续发布 | **服务端实现待合并与演练** | 公司 Beta Check 全绿；真实临时分支演练用 170 秒完成普通快进恢复并自动清理；VivagoAgent 已提交精确版本 denylist 实现 | 合并 VivagoAgent MR，并在海外非生产环境完成一次命中/解除演练 |
 | 4 | 完成公开仓库、法务和发布治理确认 | **未开始** | 公司 Beta Workflow 和 `production-beta` Environment 已准备 | 仓库公开审批、许可证/治理确认；仓库公开或套餐支持后补 required reviewer |
 | 5 | 发布 `v0.3.0-beta.1` 并观察生产指标 | **未开始** | 发布流水线已经具备生产构建、六平台、双宿主、checksum、SBOM 和 attestation 门禁 | 第 3、4 步通过后，由发布人手动批准 |
 
@@ -43,8 +43,10 @@
 - 演练结束后临时分支为 0，正式 `marketplace` 不存在，Tag 和 Release 均为 0；
 - 公司、个人 GitHub 和 Codeup 的 `main` 均已同步到 `41af5bd`。
 
-第 3 步的 GitHub 恢复链路已经验收。下面的完成条件中，前六项已有证据，最后一项需要服务端
-负责人确认：
+第 3 步的 GitHub 恢复链路已经验收，服务端责任边界也已确定：由 VivagoAgent 根据
+`X-Source: cli` 和 `X-Client-Version` 执行精确版本 denylist，不复用内容投放的
+`delivery_targets`，也不把规则放到 Agent Gateway。下面的完成条件中，前六项已有证据，第七项
+已完成设计和代码提交，待 MR 合并后做海外非生产演练：
 
 1. 完整 Python 和 Go 回归通过（已完成）；
 2. 实现提交并同步到公司、个人和 Codeup 的 `main`（已完成）；
@@ -52,8 +54,9 @@
 4. 从开始构建到远端恢复确认不超过 30 分钟（170 秒，已完成）；
 5. 临时分支已删除，正式 Tag、Release 和 `marketplace` 没有变化（已完成）；
 6. 生产结构化日志已经能看到 `source=cli` 和 `client_version`；聚合查询模板已写入运行手册（已完成）；
-7. VivagoAgent 或网关负责人确认实际生产 Loki stream selector，以及高风险 CLI 版本由哪里阻断、
-   怎么配置、如何回滚（待确认）。
+7. VivagoAgent 使用 `VIVAGO_CLI_BLOCKED_VERSIONS` 精确阻断高风险 CLI 版本，命中返回 HTTP 426
+   和 `CLI_VERSION_BLOCKED`；清空配置即可解除。实现已提交 VivagoAgent MR #356，待合并和海外
+   非生产演练。
 
 详细设计和执行步骤见：
 
@@ -65,9 +68,9 @@
 
 | 顺序 | 下一项工作 | 谁处理 | 是否需要你现在介入 |
 | ---: | --- | --- | --- |
-| 1 | 确认生产 Loki 的 VivagoAgent stream selector | VivagoAgent 运维负责人 | **现在需要你转给负责人确认** |
-| 2 | 确认服务端 CLI 版本阻断的责任服务和配置办法 | VivagoAgent 或网关负责人 | **现在需要你协调负责人** |
-| 3 | 根据负责人答复补齐非生产版本阻断演练 | CLI 与责任服务开发 | 答复后再决定是否需要你介入 |
+| 1 | 评审并合并 VivagoAgent CLI 版本 denylist MR #356 | VivagoAgent 研发 | 不需要再协调其他负责人 |
+| 2 | 在海外非生产环境写入一个测试版本，验证命中 HTTP 426 后清空配置恢复 | VivagoAgent 与 CLI 开发 | 部署窗口按现有流程执行即可 |
+| 3 | 发布窗口确认海外生产 Loki stream selector | VivagoAgent 发布执行人 | 发布前确认，不阻塞当前代码开发 |
 | 4 | 审批仓库公开和首个 Beta 发布 | 公司管理员/发布人 | **必须由你或指定发布人确认** |
 
 ## 已经验证了哪些能力（L0–L3）
@@ -377,14 +380,14 @@ L2 不调用 Codex 或 Claude 模型。它证明的是官方插件命令能安�
 | P1 | 公司 GitHub Beta 流水线 | **已完成**；[#32092763621](https://github.com/HiDream-ai/vivago-agent-cli/actions/runs/32092763621) 在 `41af5bd` 全绿 | 已完成 | 回滚演练提交进入公司 `main` | prod profile、checksum、SBOM、attestation、六平台和双宿主门禁全部通过 | 发布时需要最终确认 |
 | P1 | `production-beta` 发布边界 | Environment 与 main 限制已完成；reviewer 受 GitHub 套餐限制 | 仓库公开或套餐升级后约 0.25 天补 reviewer | GitHub 计划支持 | Environment 至少一名 reviewer | 届时需要管理员配置/确认 |
 | P1 | 海外正式环境受控 Beta | 代表平台 PASS | 发布前只需复核准确候选 SHA | 公司 Beta Check | 登录、刷新、退出重登、任务、SSE、附件和产物均通过 | 发布时需要最终确认 |
-| P1 | 回滚与停止发布演练 | **GitHub 侧已完成，等待服务端确认**；真实恢复 170 秒、临时分支已清理、正式对象未变化 | GitHub 侧已完成 | 生产日志 selector 和服务端版本阻断责任确认 | 30 分钟内完成安全版本恢复，临时分支清理，并能按 `source=cli`/版本观察影响 | **现在需要协调 VivagoAgent/网关负责人** |
+| P1 | 回滚与停止发布演练 | **GitHub 侧已完成，服务端实现已提交 MR #356**；真实恢复 170 秒、临时分支已清理、正式对象未变化 | MR 合并后约 0.25 天完成海外非生产命中/解除演练 | VivagoAgent MR 合并和海外非生产部署窗口 | 30 分钟内恢复安装通道；坏版本命中 HTTP 426；清空配置后恢复 | 不需要协调其他负责人 |
 | P2 | macOS 公证、Windows 签名 | 未开始 | 2–5 天 | Apple Developer ID、Windows 代码签名证书 | 安装和首次运行不触发无法解释的 Gatekeeper/SmartScreen 风险 | 需要公司提供证书和签名主体 |
 
 下一轮按以下顺序执行：
 
-1. 请 VivagoAgent 运维负责人提供海外生产 Loki 的稳定 stream selector，并确认监控模板字段。
-2. 请 VivagoAgent 或网关负责人确认高风险 CLI 版本阻断的责任服务、配置源、错误码和回滚办法。
-3. 根据答复在非生产环境完成一次版本阻断演练。
+1. 评审并合并 VivagoAgent MR #356。
+2. 在海外非生产环境完成一次 CLI 版本命中和清空恢复演练。
+3. 发布窗口由执行人核对海外生产 Loki stream selector 和监控模板字段。
 4. 完成法务和仓库公开审批后，再单独批准 `v0.3.0-beta.1` 发布。
 
 ## 哪些结论可以对外说
@@ -404,8 +407,9 @@ L2 不调用 Codex 或 Claude 模型。它证明的是官方插件命令能安�
 
 > VivagoAgent CLI 的 L0/L1/L2 已完成，ticket-only L3 在六平台 × 两宿主上为 12/12；macOS ARM64
 > 代表平台已完成海外生产登录、Codex 任务、SSE 恢复、附件和产物验证。第 3 步的 GitHub 回滚
-> 演练已用 170 秒完成安全版本普通快进恢复，临时分支已清理，正式发布对象未变化；当前等待服务端
-> 确认生产日志 selector 和高风险 CLI 版本阻断方案。仓库尚未公开，`v0.3.0-beta.1` 尚未发布。
+> 演练已用 170 秒完成安全版本普通快进恢复，临时分支已清理，正式发布对象未变化；VivagoAgent
+> 已提交 CLI 精确版本 denylist 实现，待 MR 合并后完成海外非生产命中/解除演练。仓库尚未公开，
+> `v0.3.0-beta.1` 尚未发布。
 
 ## 相关提交
 
