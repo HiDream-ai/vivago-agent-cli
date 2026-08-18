@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"reflect"
 	"strings"
 	"testing"
@@ -423,6 +424,30 @@ func TestProjectCommandMapsUnauthorizedHTTPToAuthFailure(t *testing.T) {
 		t.Fatalf("exit code = %d, want 20", exitCode)
 	}
 	if !bytes.Contains(stdout.Bytes(), []byte(`"code":"AUTH_FAILED"`)) {
+		t.Fatalf("stdout = %s", stdout.String())
+	}
+}
+
+func TestProjectCommandMapsBlockedVersionToUpgradeFailure(t *testing.T) {
+	projects := &fakeProjectRuntime{err: &client.HTTPError{
+		StatusCode: 426,
+		Code:       "CLI_VERSION_BLOCKED",
+		Message:    "This Vivago Agent CLI version is no longer supported. Please upgrade and retry.",
+	}}
+	var stdout bytes.Buffer
+	exitCode := RunContext(
+		context.Background(),
+		[]string{"--json", "project", "list"},
+		&stdout,
+		io.Discard,
+		BuildInfo{Version: "0.0.0-policy-test"},
+		Runtime{Projects: projects},
+	)
+	if exitCode != exitBusiness {
+		t.Fatalf("exit code = %d, want %d", exitCode, exitBusiness)
+	}
+	if !bytes.Contains(stdout.Bytes(), []byte(`"code":"CLI_VERSION_BLOCKED"`)) ||
+		!bytes.Contains(stdout.Bytes(), []byte(`"message":"This Vivago Agent CLI version is no longer supported. Please upgrade and retry."`)) {
 		t.Fatalf("stdout = %s", stdout.String())
 	}
 }

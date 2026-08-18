@@ -83,19 +83,15 @@ Actions Artifact 保存，不提交生成的二进制或 Marketplace 到源码�
 [`vivago-agent-cli-beta-rollback-runbook.md`](../vivago-agent-cli-beta-rollback-runbook.md)。部署使用的
 Loki stream selector 由 VivagoAgent 运维负责人确认，CLI 仓库不硬编码生产日志标签。
 
-## 还缺的服务端能力
+## 服务端版本阻断验收
 
-CLI 已发送 `X-Client-Version`，VivagoAgent 也会把版本写入请求日志，但当前源码中没有找到针对
-CLI 高风险版本的拒绝规则。正式公开 Beta 前，需要由 VivagoAgent 或网关负责人确认：
+版本阻断责任已确定为 VivagoAgent，不放到 Agent Gateway，也不在 CLI 内实现第二套 denylist。
+VivagoAgent 使用海外环境 ConfigMap 的完整版本精确列表，仅拦截 `X-Source: cli` 且版本命中的请求。
 
-- 阻断规则放在哪个服务；
-- 配置由谁维护、如何审批和回滚；
-- 命中后返回哪个稳定错误码和用户提示；
-- 是否只影响 `X-Source: cli`，并继续保留用户全局限流；
-- 如何先对测试版本演练，再用于生产。
-
-这项能力不在 CLI 仓库中临时实现，也不会在未确认责任方和配置来源时直接操作生产。GitHub 演练
-和监控查询完成后，工作会停在服务端确认节点。
+2026-08-18 已将功能分支临时部署到海外测试环境，并使用仅用于演练的
+`0.0.0-policy-test` 发起已认证只读请求，确认服务端返回 HTTP 426。联调同时发现 CLI 原先把 426
+统一折叠为 `TRANSPORT_ERROR`；CLI 随后补齐受控响应解析，命中时稳定输出
+`CLI_VERSION_BLOCKED` 和升级提示。生产 denylist 仍保持为空。
 
 ## 第一轮实施范围
 
@@ -123,5 +119,5 @@ CLI 高风险版本的拒绝规则。正式公开 Beta 前，需要由 VivagoAge
 
 2026-08-18 的第一轮真实演练已经验证上述策略：公司 Beta Check 和回滚 Workflow 均通过，恢复耗时
 170 秒，恢复提交为问题提交的普通快进子提交；临时分支删除成功，正式 `marketplace`、Tag 和
-Release 均未产生。当前设计无需修改，剩余工作是服务端负责人确认生产日志 selector 和版本阻断
-能力。
+Release 均未产生。版本阻断的海外测试命中已经完成，剩余工作是清空测试哨兵并验证恢复、合并
+VivagoAgent 变更，以及在发布窗口确认生产日志 selector。

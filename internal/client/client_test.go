@@ -83,6 +83,41 @@ func TestCreateProjectReturnsRedactedHTTPError(t *testing.T) {
 	}
 }
 
+func TestCreateProjectPreservesVersionBlockedHTTPContract(t *testing.T) {
+	httpClient := &http.Client{Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusUpgradeRequired,
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+			Body: io.NopCloser(strings.NewReader(
+				`{"code":"CLI_VERSION_BLOCKED","message":"Please upgrade.","ticket":"secret"}`,
+			)),
+			Request: request,
+		}, nil
+	})}
+	api, err := New(Config{
+		BaseURL:       "https://example.com",
+		HTTPClient:    httpClient,
+		TokenProvider: staticTokenProvider{token: "test-ticket"},
+		Metadata:      Metadata{Version: "0.0.0-policy-test"},
+	})
+	if err != nil {
+		t.Fatalf("new client: %v", err)
+	}
+
+	_, err = api.CreateProject(context.Background(), "blocked")
+	var httpError *HTTPError
+	if !errors.As(err, &httpError) {
+		t.Fatalf("error = %v, want HTTPError", err)
+	}
+	if httpError.StatusCode != http.StatusUpgradeRequired ||
+		httpError.Code != "CLI_VERSION_BLOCKED" || httpError.Message != "Please upgrade." {
+		t.Fatalf("HTTP error = %#v", httpError)
+	}
+	if strings.Contains(err.Error(), "secret") || strings.Contains(err.Error(), "test-ticket") {
+		t.Fatalf("HTTP error leaked response or token: %v", err)
+	}
+}
+
 func (p staticTokenProvider) AccessToken(context.Context) (string, error) {
 	return p.token, nil
 }

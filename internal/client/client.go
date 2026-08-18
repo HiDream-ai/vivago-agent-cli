@@ -31,10 +31,30 @@ type BusinessError struct {
 
 type HTTPError struct {
 	StatusCode int
+	Code       string
+	Message    string
 }
 
 func (err *HTTPError) Error() string {
 	return fmt.Sprintf("VivagoAgent request failed with HTTP %d", err.StatusCode)
+}
+
+func versionBlockedHTTPError(response *http.Response) *HTTPError {
+	httpError := &HTTPError{StatusCode: response.StatusCode}
+	if response.StatusCode != http.StatusUpgradeRequired {
+		return httpError
+	}
+	var payload struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+	}
+	if err := json.NewDecoder(io.LimitReader(response.Body, 16<<10)).Decode(&payload); err != nil ||
+		payload.Code != "CLI_VERSION_BLOCKED" {
+		return httpError
+	}
+	httpError.Code = payload.Code
+	httpError.Message = strings.TrimSpace(payload.Message)
+	return httpError
 }
 
 func (err *BusinessError) Error() string {
@@ -371,8 +391,9 @@ func (client *Client) StartChat(ctx context.Context, body map[string]any) (*Agen
 		return nil, fmt.Errorf("send request: %w", err)
 	}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		httpError := versionBlockedHTTPError(response)
 		_ = response.Body.Close()
-		return nil, &HTTPError{StatusCode: response.StatusCode}
+		return nil, httpError
 	}
 	return &AgentStream{
 		ConversationID: response.Header.Get("X-Vivago-Conversation-Id"),
@@ -410,7 +431,7 @@ func (client *Client) postJSON(ctx context.Context, path string, body map[string
 	}
 	defer response.Body.Close()
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return nil, &HTTPError{StatusCode: response.StatusCode}
+		return nil, versionBlockedHTTPError(response)
 	}
 
 	var decoded map[string]any
@@ -453,7 +474,7 @@ func (client *Client) getJSON(
 	}
 	defer response.Body.Close()
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return nil, &HTTPError{StatusCode: response.StatusCode}
+		return nil, versionBlockedHTTPError(response)
 	}
 	var decoded map[string]any
 	if err := json.NewDecoder(response.Body).Decode(&decoded); err != nil {

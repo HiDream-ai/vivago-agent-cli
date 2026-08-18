@@ -135,6 +135,10 @@ sum by (client_version) (
 `X-Client-Version` 精确命中的请求返回 HTTP 426、`CLI_VERSION_BLOCKED` 和升级提示。缺失版本、
 未命中版本及 Web/App 请求继续放行。
 
+CLI 只解析该受控的 `426 + CLI_VERSION_BLOCKED` 错误契约，机器输出保持
+`error.code=CLI_VERSION_BLOCKED`，并使用业务错误退出码 `30`。其他非成功 HTTP 响应继续按既有
+脱敏规则处理，不透出原始响应、凭证或授权头。
+
 启用前先在海外非生产环境写入一个测试版本，确认命中后将配置清空并重新发布，验证请求恢复。
 真实事故解除封禁同样通过清空该配置完成。GitHub 安装通道恢复和服务端版本阻断必须分别留证；
 任何演练都不得把真实已发布版本写入生产 denylist。

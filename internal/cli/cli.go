@@ -517,6 +517,20 @@ func writeOperationError(stdout io.Writer, err error) int {
 	}
 	var httpError *client.HTTPError
 	if errors.As(err, &httpError) &&
+		httpError.StatusCode == 426 && httpError.Code == "CLI_VERSION_BLOCKED" {
+		message := strings.TrimSpace(httpError.Message)
+		if message == "" {
+			message = "This Vivago Agent CLI version is no longer supported. Please upgrade and retry."
+		}
+		writeEnvelope(stdout, envelope{
+			Error: map[string]string{
+				"code":    "CLI_VERSION_BLOCKED",
+				"message": message,
+			},
+		})
+		return exitBusiness
+	}
+	if errors.As(err, &httpError) &&
 		(httpError.StatusCode == 401 || httpError.StatusCode == 403) {
 		writeEnvelope(stdout, envelope{
 			Error: map[string]string{
