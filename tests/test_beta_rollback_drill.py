@@ -10,6 +10,9 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT / "scripts"))
+from run_beta_rollback_drill import DrillError, _run_git  # noqa: E402
+
 VALIDATOR = REPO_ROOT / "scripts" / "validate_beta_rollback_drill.py"
 RUNNER = REPO_ROOT / "scripts" / "run_beta_rollback_drill.py"
 INCIDENT_REVISION = "a" * 40
@@ -139,6 +142,7 @@ class BetaRollbackDrillRunnerTests(unittest.TestCase):
         recovery_version: str = "0.3.0-beta.2",
         recovery_build_info_version: str = "0.3.0-beta.2",
         started_at: int | None = None,
+        require_commit_signing: bool = False,
     ) -> subprocess.CompletedProcess[str]:
         remote = root / "remote.git"
         source = root / "source"
@@ -179,6 +183,11 @@ class BetaRollbackDrillRunnerTests(unittest.TestCase):
             capture_output=True,
             text=True,
         )
+        if require_commit_signing:
+            subprocess.run(
+                ["git", "-C", str(source), "config", "commit.gpgsign", "true"],
+                check=True,
+            )
         subprocess.run(
             ["git", "-C", str(source), "remote", "add", "origin", str(remote)],
             check=True,
@@ -278,6 +287,21 @@ class BetaRollbackDrillRunnerTests(unittest.TestCase):
         self.assertGreater(report["elapsed_seconds"], 1800)
         self.assertEqual(report["cleanup"], "deleted")
         self.assertEqual(remote_branch, "")
+
+    def test_git_failure_reports_safe_diagnostics(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = Path(directory)
+            subprocess.run(["git", "init", str(repository)], check=True, capture_output=True)
+            with self.assertRaises(DrillError) as context:
+                _run_git(repository, ["not-a-real-git-operation"])
+
+        self.assertIn("git not-a-real-git-operation failed (exit", str(context.exception))
+
+    def test_rollback_commits_ignore_global_signing_policy(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            result = self._run(Path(directory), require_commit_signing=True)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
 
 
 if __name__ == "__main__":

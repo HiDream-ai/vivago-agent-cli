@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -22,6 +23,29 @@ BUILD_INFO = Path("plugins/vivago-agent-cli/BUILD_INFO.json")
 
 class DrillError(RuntimeError):
     pass
+
+
+def _git_operation(arguments: list[str]) -> str:
+    index = 0
+    while index < len(arguments):
+        if arguments[index] == "-c" and index + 1 < len(arguments):
+            index += 2
+            continue
+        if not arguments[index].startswith("-"):
+            return arguments[index]
+        index += 1
+    return "command"
+
+
+def _safe_git_diagnostic(stderr: str) -> str:
+    line = next((value.strip() for value in stderr.splitlines() if value.strip()), "")
+    line = re.sub(r"https?://\S+", "[redacted-url]", line)
+    line = re.sub(
+        r"(?i)(authorization|cookie|refresh[_ -]?token|access[_ -]?token)(\s*[:=]\s*)\S+",
+        r"\1\2[redacted]",
+        line,
+    )
+    return line[:300]
 
 
 def _arguments(argv: list[str] | None = None) -> argparse.Namespace:
@@ -54,8 +78,12 @@ def _run_git(
         check=False,
     )
     if result.returncode != 0 and not allow_failure:
-        operation = arguments[0] if arguments else "command"
-        raise DrillError(f"git {operation} failed")
+        operation = _git_operation(arguments)
+        diagnostic = _safe_git_diagnostic(result.stderr)
+        suffix = f": {diagnostic}" if diagnostic else ""
+        raise DrillError(
+            f"git {operation} failed (exit {result.returncode}){suffix}"
+        )
     return result
 
 
@@ -129,6 +157,8 @@ def _commit(repository: Path, message: str) -> str:
             "user.name=github-actions[bot]",
             "-c",
             "user.email=41898282+github-actions[bot]@users.noreply.github.com",
+            "-c",
+            "commit.gpgsign=false",
             "commit",
             "-m",
             message,

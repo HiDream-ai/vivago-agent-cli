@@ -121,6 +121,9 @@ owner of server-side conversation history.
   fail closed if the wrong workflow is run in the wrong repository.
 - Public Beta is fully public: after a short private bootstrap and audit period, the company GitHub
   repository is made public and all existing Vivago users may install the production Beta.
+- On 2026-08-18 the company GitHub repository was switched to public after repository governance
+  checks passed. This changes source visibility only; the first production Beta Tag, Release, and
+  Marketplace publication still require the separate manual release approval.
 - Tags and Releases are versioned snapshots, not source branches. Company versions use
   `v0.3.0-beta.N`; personal development versions use `v0.3.0-dev.N`.
 - Because `v0.3.0-beta.1` has no real previous Beta, its isolated host lifecycle gate may use a
