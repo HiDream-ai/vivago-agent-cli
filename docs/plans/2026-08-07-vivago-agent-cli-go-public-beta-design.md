@@ -8,6 +8,8 @@
 [`2026-08-07-vivago-agent-login-frontend-integration.md`](2026-08-07-vivago-agent-login-frontend-integration.md)。
 生产附件和产物的独立 Hosted Runner 验证设计见
 [`2026-08-17-vivago-agent-cli-production-attachment-smoke-design.md`](2026-08-17-vivago-agent-cli-production-attachment-smoke-design.md)。
+发布前的临时分支回滚与停止发布演练见
+[`2026-08-18-vivago-agent-cli-beta-rollback-drill-design.md`](2026-08-18-vivago-agent-cli-beta-rollback-drill-design.md)。
 
 ## 背景
 
@@ -495,6 +497,11 @@ claude plugin install vivago-agent-cli@vivago
 11. 由发布机器人更新公司仓库 `marketplace` 分支中的完整插件包和版本。
 
 公司 `marketplace` 分支不能接收个人 GitHub、开发机或其他流水线直接上传的二进制。Tag 和 Release 不允许覆盖，GitHub Actions 使用固定版本或 commit SHA。个人 GitHub 的测试结果可以作为评审证据，但公司 CI 必须独立重跑发布门禁。
+
+事故恢复不把 `marketplace` 强推回旧提交。发布系统从已验证的安全源码重新构建更高版本，例如用
+`beta.2` 替代有问题的 `beta.1`，再以普通快进提交更新安装通道。首个 Beta 发布前使用公司私有仓库
+的临时 `drill/*` 分支验证这套机制；演练不创建 Tag、Release 或正式 `marketplace`，完成后删除临时
+分支。CLI 版本阻断由 VivagoAgent 或网关负责，具体责任方和配置来源确认前不直接操作生产。
 
 公开 Beta 暂不把 Apple 公证和 Windows 签名作为发布阻断项，但必须提供 checksum、SBOM、构建来源证明和受保护 Tag。后续扩大到大量普通用户或企业用户前，再补 macOS Developer ID/Notarization 和 Windows Authenticode。
 
