@@ -9,7 +9,7 @@
 | 首个生产候选 | `0.3.0-beta.1` |
 | 环境 | 海外测试（`profile=dev`）和海外生产（`profile=prod`） |
 | 是否已经公开发布 | **没有** |
-| 当前进行到 | **第 4 步收口：个人 dev CI 已通过，公司 Beta Check 已触发** |
+| 当前进行到 | **第 4 步收口：个人 dev CI 和公司 Beta Check 均已通过** |
 
 ### 2026-08-18 最新状态
 
@@ -19,8 +19,9 @@ VivagoAgent 版本阻断 MR #356 已合并到 `dev`，合并提交为 `8fe5d448�
 没有手动触发新的部署，生产阻断配置仍为空。
 
 CLI 修复已提交到个人 GitHub `main`（`5f75b14`），并随提交 `15f6fc6` 同步到公司 GitHub
-`main`。公司 Beta Check 已由该提交触发，目前只执行生产候选构建、插件校验、SBOM 和产物门禁；
-Beta Tag、Release 和官方 Beta Marketplace 均尚未创建。
+`main`。公司 Beta Check [#32102647493](https://github.com/HiDream-ai/vivago-agent-cli/actions/runs/32102647493)
+已通过：生产候选构建、六平台原生启动、Codex/Claude 双宿主生命周期、插件校验、SBOM 和产物门禁
+全部成功。Beta Tag、Release 和官方 Beta Marketplace 均尚未创建。
 
 个人 Development CI [#32101640741](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/32101640741)
 已通过：默认/prod/race/vet、分发测试、Codex/Claude 插件校验、六平台开发二进制、Marketplace
@@ -36,7 +37,7 @@ Beta Tag、Release 和官方 Beta Marketplace 均尚未创建。
 | 1 | 完成 CLI、插件包、六平台构建和双宿主安装门禁 | **已完成** | L0/L1 为 6/6，L2 为 12/12；`v0.3.0-dev.8` 已发布到个人开发通道 | 无首个 Beta 阻断项 |
 | 2 | 用生产候选完成代表平台验收 | **已完成** | macOS ARM64/Codex 已通过生产登录、刷新、退出重登、任务、SSE、附件、产物和 Web 可见性 | 生产六平台真人登录和 Claude Code 模型调用不在本轮范围 |
 | 3 | 验证出问题后能否安全恢复并停止继续发布 | **已完成** | 公司 Beta Check 全绿；真实临时分支演练用 170 秒完成普通快进恢复并自动清理；VivagoAgent MR #356 已合并；海外测试命中 HTTP 426 后已恢复 | 生产发布前继续保持阻断配置为空 |
-| 4 | 完成公开仓库、法务和发布治理确认 | **进行中** | 个人 Development CI 已通过；公司 Beta Check 已触发；`production-beta` Environment 已准备 | 等待公司 Beta Check 收口，并确认许可证/治理和公开仓库审批 |
+| 4 | 完成公开仓库、法务和发布治理确认 | **进行中** | 个人 Development CI 和公司 Beta Check 均已通过；`production-beta` Environment 已准备 | 确认许可证/治理和公开仓库审批 |
 | 5 | 发布 `v0.3.0-beta.1` 并观察生产指标 | **未开始** | 发布流水线已经具备生产构建、六平台、双宿主、checksum、SBOM 和 attestation 门禁 | 第 3、4 步通过后，由发布人手动批准 |
 
 ### 第 3 步目前做到哪里
@@ -83,7 +84,7 @@ Beta Tag、Release 和官方 Beta Marketplace 均尚未创建。
 | 顺序 | 下一项工作 | 谁处理 | 是否需要你现在介入 |
 | ---: | --- | --- | --- |
 | 1 | 个人 GitHub dev CI 验证 CLI 修复并生成开发产物 | **已完成**；[Development CI #32101640741](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/32101640741) | 无 |
-| 2 | 将同一 CLI 提交同步到公司 GitHub `main`，运行 Beta Check | **已完成，Beta Check 运行中** | 同一提交 `15f6fc6` 已推送到公司 `main`，运行 [Beta Check #32102647493](https://github.com/HiDream-ai/vivago-agent-cli/actions/runs/32102647493) | 等待 CI 结果；不触发发布 |
+| 2 | 将同一 CLI 提交同步到公司 GitHub `main`，运行 Beta Check | **已完成，Beta Check 已通过** | 同一提交 `15f6fc6` 已推送到公司 `main`；[Beta Check #32102647493](https://github.com/HiDream-ai/vivago-agent-cli/actions/runs/32102647493) 全绿 | 不触发发布；进入公开治理确认 |
 | 3 | 发布窗口确认海外生产 Loki stream selector | VivagoAgent 发布执行人 | 发布前确认，不阻塞当前代码开发 |
 | 4 | 审批仓库公开和首个 Beta 发布 | 公司管理员/发布人 | **必须由你或指定发布人确认** |
 
@@ -423,7 +424,7 @@ L2 不调用 Codex 或 Claude 模型。它证明的是官方插件命令能安�
 > 代表平台已完成海外生产登录、Codex 任务、SSE 恢复、附件和产物验证。第 3 步的 GitHub 回滚
 > 演练已用 170 秒完成安全版本普通快进恢复，临时分支已清理，正式发布对象未变化；VivagoAgent
 > 的 CLI 精确版本 denylist 已合并并完成海外非生产命中/解除演练。当前等待个人 dev CI 和公司
-> 个人 dev CI 已通过，公司 Beta Check 正在收口。仓库尚未公开，
+> 个人 dev CI 和公司 Beta Check 均已通过。仓库尚未公开，
 > `v0.3.0-beta.1` 尚未发布，也没有执行部署、Tag、Release 或 Marketplace 发布。
 
 ## 相关提交
