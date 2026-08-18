@@ -124,6 +124,9 @@ owner of server-side conversation history.
 - On 2026-08-18 the company GitHub repository was switched to public after repository governance
   checks passed. This changes source visibility only; the first production Beta Tag, Release, and
   Marketplace publication still require the separate manual release approval.
+- On 2026-08-18 the first production Beta `v0.3.0-beta.1` was published from the reviewed company
+  `main` commit after all release gates passed. The release is a GitHub prerelease and the production
+  `marketplace` branch is the external installation channel; service deployment is a separate concern.
 - Tags and Releases are versioned snapshots, not source branches. Company versions use
   `v0.3.0-beta.N`; personal development versions use `v0.3.0-dev.N`.
 - Because `v0.3.0-beta.1` has no real previous Beta, its isolated host lifecycle gate may use a
