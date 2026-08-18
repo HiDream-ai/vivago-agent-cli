@@ -1,5 +1,15 @@
 # VivagoAgent 插件安装和升级说明
 
+## 当前公开版本
+
+当前可安装版本为 **`v0.3.0-beta.1`**，来自公司公开 GitHub 仓库的 `marketplace` 分支：
+
+- [Beta Release v0.3.0-beta.1](https://github.com/HiDream-ai/vivago-agent-cli/releases/tag/v0.3.0-beta.1)
+- [公司公开仓库](https://github.com/HiDream-ai/vivago-agent-cli)
+
+这是连接海外正式环境的生产 Beta 版本，不是最终 GA 稳定版。现有 Vivago 用户可以直接安装使用；
+安装过程不需要 GitHub PAT，也不需要单独安装 Go、Python 或其他运行时。
+
 VivagoAgent 插件支持 Codex 和 Claude Code，安装包内置 macOS、Windows、Linux 的 ARM64/x64
 二进制。普通用户不需要安装 Go、Python、`vivago-agent` 或 `vivago-client`。公开 Beta 固定访问
 Vivago 海外正式环境，不提供环境切换，也不调用 App API。
