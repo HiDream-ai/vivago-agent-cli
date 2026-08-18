@@ -1,23 +1,69 @@
-# VivagoAgent CLI 公开 Beta 验证进度（L0–L3）
+# VivagoAgent CLI 公开 Beta 总进度
 
-更新时间：2026-08-17
+更新时间：2026-08-18
 
-当前长期源码分支：`main`
+| 项目 | 当前状态 |
+| --- | --- |
+| 长期源码分支 | `main` |
+| 开发版本 | `0.3.0-dev.8` |
+| 首个生产候选 | `0.3.0-beta.1` |
+| 环境 | 海外测试（`profile=dev`）和海外生产（`profile=prod`） |
+| 是否已经公开发布 | **没有** |
+| 当前进行到 | **第 3 步：回滚与停止发布演练** |
 
-当前开发版本：`0.3.0-dev.8`
+## 现在到哪一步了
 
-当前生产候选：`0.3.0-beta.1`
+公开 Beta 按五步推进。前两步已经完成，现在正在做第 3 步；仓库公开和 `v0.3.0-beta.1`
+发布还没有开始。
 
-验证环境：海外测试环境（`profile=dev`）与海外生产环境（`profile=prod`）
+| 步骤 | 要完成的事情 | 当前状态 | 已有证据 | 还差什么 |
+| ---: | --- | --- | --- | --- |
+| 1 | 完成 CLI、插件包、六平台构建和双宿主安装门禁 | **已完成** | L0/L1 为 6/6，L2 为 12/12；`v0.3.0-dev.8` 已发布到个人开发通道 | 无首个 Beta 阻断项 |
+| 2 | 用生产候选完成代表平台验收 | **已完成** | macOS ARM64/Codex 已通过生产登录、刷新、退出重登、任务、SSE、附件、产物和 Web 可见性 | 生产六平台真人登录和 Claude Code 模型调用不在本轮范围 |
+| 3 | 验证出问题后能否安全恢复并停止继续发布 | **进行中** | 回滚设计、运行手册和实现已完成；专项测试 30/30、Python 全量 129/129、Go 默认/生产/Race/Vet 及官方插件校验 PASS | 提交推送、公司 GitHub 真实临时分支演练、聚合监控证据、服务端版本阻断确认 |
+| 4 | 完成公开仓库、法务和发布治理确认 | **未开始** | 公司 Beta Workflow 和 `production-beta` Environment 已准备 | 仓库公开审批、许可证/治理确认；仓库公开或套餐支持后补 required reviewer |
+| 5 | 发布 `v0.3.0-beta.1` 并观察生产指标 | **未开始** | 发布流水线已经具备生产构建、六平台、双宿主、checksum、SBOM 和 attestation 门禁 | 第 3、4 步通过后，由发布人手动批准 |
 
-当前可以确认：`dev.8` 的六平台构建、原生 CLI 和 Codex/Claude Code 插件生命周期已经跑通；此前 ticket-only 在线业务验证仍为 12/12。macOS ARM64 还补齐了真实登录、刷新、退出、重登、Codex 自然语言选择 Skill，以及 CLI 项目在 Web 页面可见性。
+### 第 3 步目前做到哪里
 
-这还不是“完整公开 Beta 发布完成”。生产 `/agent/login` 已上线，生产登录/刷新/退出/重登、Codex
-代表平台文本任务、Web 可见性、SSE 断流恢复、Hosted Runner 附件/产物闭环，以及当前 Mac 的
-标准环境代理兼容验证均已通过。尚未执行生产候选回滚演练、公司仓库公开和 Beta Release 发布。
-本轮按用户决定不验证 Claude Code 模型主动选择 Skill。
+本地已经准备好以下回滚演练实现：
 
-## 当前进度总表
+- 公司 `main` 手动触发的 `Beta Rollback Drill` Workflow；
+- 公司仓库、分支、版本号、安全源码 SHA 和临时分支名校验；
+- 用问题版本和更高恢复版本构建两份真实 `prod` Marketplace；
+- 只向 `drill/marketplace-*` 临时分支做普通快进提交，结束后自动删除；
+- 禁止创建 Tag、Release、正式 `marketplace`，也不读取生产业务凭据；
+- 本地回滚脚本和 Workflow 合同测试，目前专项结果为 30/30 PASS。
+- Python 全量 129/129、Go 默认/生产、Race、Vet 和官方 Codex 插件校验均已通过。
+
+这些实现仍在本地工作区，还不能算远端演练完成。第 3 步只有在下面几项都有证据后才能改成
+“已完成”：
+
+1. 完整 Python 和 Go 回归通过（已完成）；
+2. 实现提交并同步到公司、个人和 Codeup 的 `main`；
+3. 公司 GitHub 实际创建临时分支，先写入模拟问题版本，再以更高版本恢复到安全源码；
+4. 从开始构建到远端恢复确认不超过 30 分钟；
+5. 临时分支已删除，正式 Tag、Release 和 `marketplace` 没有变化；
+6. 能按 `source=cli` 和 `client_version` 查看生产聚合指标；
+7. VivagoAgent 或网关负责人确认高风险 CLI 版本由哪里阻断、怎么配置、如何回滚。
+
+详细设计和执行步骤见：
+
+- [Beta 回滚与停止发布演练设计](./2026-08-18-vivago-agent-cli-beta-rollback-drill-design.md)
+- [Beta 回滚演练实施计划](./2026-08-18-vivago-agent-cli-beta-rollback-drill-implementation-plan.md)
+- [Beta 回滚演练运行手册](../vivago-agent-cli-beta-rollback-runbook.md)
+
+## 接下来做什么，什么时候需要你介入
+
+| 顺序 | 下一项工作 | 谁处理 | 是否需要你现在介入 |
+| ---: | --- | --- | --- |
+| 1 | 完成回滚演练实现和完整本地回归 | CLI 开发 | 不需要 |
+| 2 | 提交并同步三个 `main`，重跑公司 Beta Check | CLI 开发 | 不需要；发生权限或 CI 阻断时再同步 |
+| 3 | 在公司私有仓库运行一次真实回滚演练并记录结果 | CLI 开发/发布人 | 触发远端写入前需要发布人确认 |
+| 4 | 确认服务端 CLI 版本阻断的责任服务和配置办法 | VivagoAgent 或网关负责人 | 需要你协调负责人时再介入 |
+| 5 | 审批仓库公开和首个 Beta 发布 | 公司管理员/发布人 | **必须由你或指定发布人确认** |
+
+## 已经验证了哪些能力（L0–L3）
 
 | 层级 | 主要验证什么 | 当前结果 | 状态 | 关键证据 | 还缺什么 |
 | --- | --- | ---: | --- | --- | --- |
@@ -30,7 +76,7 @@
 
 ## 六个平台的结果
 
-| 目标平台 | GitHub Runner | 插件 launcher | L0 构建 | L1 原生启动 | L2 Codex/Claude | L3 Codex/Claude |
+| 目标平台 | GitHub Runner | 插件 launcher | L0 构建 | L1 原生启动 | L2 Codex/Claude | Dev L3 Codex/Claude |
 | --- | --- | --- | --- | --- | --- | --- |
 | macOS ARM64 | `macos-26` | `vivago-agent` | PASS | PASS | 2/2 PASS | 2/2 PASS |
 | macOS x64 | `macos-26-intel` | `vivago-agent` | PASS | PASS | 2/2 PASS | 2/2 PASS |
@@ -50,7 +96,7 @@
 | L2 | 在每个平台分别安装 Codex 和 Claude Code，通过官方插件命令做安装、升级、回滚和再升级 | 12 个组合的四个阶段都找到正确插件缓存和 launcher，`doctor_exit=0` | 插件包能被两个宿主正确安装和维护 | 不登录宿主模型，也不提交 VivagoAgent 业务任务 |
 | L3 | 向 Runner 注入一次性 VivagoAgent ticket，安装插件后直接调用其 launcher 提交真实任务 | 两个宿主路径均完成任务、附件、SSE 恢复、产物、取消、历史和重启检查 | 插件 CLI 到 VivagoAgent 的真实在线业务路径可用 | 本轮不证明标准登录、模型自动选 Skill、数据库字段持久化或 Web UI 展示 |
 
-## 当前验证基线
+## 开发版 dev.8 验证基线
 
 | 项目 | 当前值 |
 | --- | --- |
@@ -310,29 +356,30 @@ L2 不调用 Codex 或 Claude 模型。它证明的是官方插件命令能安�
 
 当前本机 Mongo 只读工具只配置了正式库，没有海外测试库目标。为了避免拿测试 ID 查询正式库或临时拼接数据库凭据，本轮没有直接读取海外测试 Mongo。Web 可见性证明 Project、Conversation 和 Turn 由服务端持久化并可被 Web 复用，但不能代替对 `source` 字段值的数据库只读查询。服务端补齐 `Project / Conversation / Turn.source=cli` 及日志、监控、限流统计由服务端研发确认完成。
 
-## 后续还需要做什么
+## 完成第 3 步以后还要做什么
 
 以下估时只计算开发和验证时间，不包含账号、权限、证书或跨团队排期等待。
 
 | 优先级 | 工作 | 当前状态 | 预计工作量 | 前置依赖 | 验收标准 | 是否需要你介入 |
 | --- | --- | --- | ---: | --- | --- | --- |
-| P0 | 代理兼容提交进入公司 `main` | 本地 `main` 已完成实现和生产 E2E，等待推送 | 0.25 天 | 完整本地门禁 | 公司 Beta Check 在准确 SHA 上通过 | 无 |
+| P0 | 代理兼容提交进入公司 `main` | **已完成**；公司、个人和 Codeup 远端 `main` 均已包含 `26ed642` | 已完成 | 完整本地门禁 | 三个远端 `main` 指向同一已验证提交 | 无 |
 | P0 | 海外测试登录、刷新、退出重登 | macOS ARM64 PASS | 其余平台按风险决定是否扩展 | dev.8、海外测试账号 | 当前代表平台流程已闭环 | 当前无需介入 |
 | P0 | 宿主模型主动选择 Skill | Codex PASS；Claude Code 本轮移除 | Claude 后续如恢复范围约 0.25 天 | 可用宿主账号 | 自然语言触发、模型主动加载 Skill，不手工执行 launcher | 本轮不需要 |
 | P0 | `source/platform` 数据库持久化 | 服务端研发确认完成；日志与 Web 证据已具备，未直接查测试库字段 | 只读补证约 0.25 天，可后置 | 海外测试 Mongo 只读目标 | 精确核对三类对象的 `source=cli` | 需要协调只读权限时再介入 |
 | P0 | Web 页面可见性 | PASS | 已完成 | 海外测试 Web 登录 | CLI 项目、请求和回复可在 Web 打开 | 无 |
-| P1 | 公司 GitHub Beta 流水线 | 已完成 | 新提交推送后重跑一次 | 代理兼容提交进入公司 `main` | prod profile、checksum、SBOM、attestation、六平台和双宿主门禁全部通过 | 发布时需要最终确认 |
+| P1 | 公司 GitHub Beta 流水线 | 流水线已完成；回滚演练实现合入后需要在新 SHA 上重跑 | 约 0.25 天 | 回滚演练提交进入公司 `main` | prod profile、checksum、SBOM、attestation、六平台和双宿主门禁全部通过 | 发布时需要最终确认 |
 | P1 | `production-beta` 发布边界 | Environment 与 main 限制已完成；reviewer 受 GitHub 套餐限制 | 仓库公开或套餐升级后约 0.25 天补 reviewer | GitHub 计划支持 | Environment 至少一名 reviewer | 届时需要管理员配置/确认 |
 | P1 | 海外正式环境受控 Beta | 代表平台 PASS | 发布前只需复核准确候选 SHA | 公司 Beta Check | 登录、刷新、退出重登、任务、SSE、附件和产物均通过 | 发布时需要最终确认 |
-| P1 | 回滚与停止发布演练 | 未开始 | 0.5 天 | Beta 候选包、版本阻断和监控能力 | 30 分钟内完成安全版本或 Marketplace 恢复，并能按 `source=cli`/版本观察影响 | 需要服务端和发布人确认 |
+| P1 | 回滚与停止发布演练 | **进行中**；设计、运行手册和本地实现已具备，专项 30/30、Python 全量 129/129、Go 与插件校验 PASS | 约 0.5 天 | 公司 `main`、生产聚合监控和服务端版本阻断责任确认 | 30 分钟内完成安全版本恢复，临时分支清理，并能按 `source=cli`/版本观察影响 | 远端演练和服务端确认时需要 |
 | P2 | macOS 公证、Windows 签名 | 未开始 | 2–5 天 | Apple Developer ID、Windows 代码签名证书 | 安装和首次运行不触发无法解释的 Gatekeeper/SmartScreen 风险 | 需要公司提供证书和签名主体 |
 
-如果只安排下一轮验证，建议顺序是：
+下一轮按以下顺序执行：
 
-1. 更新验证文档，把代理兼容提交推送到公司、个人和 Codeup 的 `main`。
-2. 等待公司 Beta Check 在新 SHA 上完成 L0、L1、L2 和供应链门禁。
-3. 执行回滚与停止发布演练，确认服务端版本阻断和 `source=cli` 监控。
-4. 完成公司法务/治理确认后，单独审批仓库公开和 `v0.3.0-beta.1` 发布。
+1. 完成回滚演练代码的完整回归、提交和三个 `main` 同步。
+2. 在新 SHA 上重跑公司 Beta Check，确认 L0、L1、L2 和供应链门禁没有回归。
+3. 在公司私有仓库执行回滚演练，记录恢复耗时、临时分支清理和正式发布对象未变化的证据。
+4. 查询 `source=cli` / `client_version` 聚合指标，并确认服务端高风险版本阻断由谁负责。
+5. 完成法务和仓库公开审批后，再单独批准 `v0.3.0-beta.1` 发布。
 
 ## 哪些结论可以对外说
 
@@ -349,7 +396,10 @@ L2 不调用 Codex 或 Claude 模型。它证明的是官方插件命令能安�
 
 当前准确说法是：
 
-> VivagoAgent CLI 的 L0/L1/L2 已完成，ticket-only L3 在六平台 × 两宿主上为 12/12；macOS ARM64 代表平台已完成海外生产登录、Codex 任务、SSE 恢复、附件和产物验证。公司 Beta 构建与发布流水线已就绪但未发布，当前等待新提交的 Beta Check、回滚演练和公开发布审批。
+> VivagoAgent CLI 的 L0/L1/L2 已完成，ticket-only L3 在六平台 × 两宿主上为 12/12；macOS ARM64
+> 代表平台已完成海外生产登录、Codex 任务、SSE 恢复、附件和产物验证。当前正在做第 3 步回滚
+> 演练，本地专项测试 30/30 通过，但公司 GitHub 真实演练还没有执行。仓库尚未公开，
+> `v0.3.0-beta.1` 尚未发布。
 
 ## 相关提交
 

@@ -1,0 +1,224 @@
+name: Beta Rollback Drill
+
+on:
+  workflow_dispatch:
+    inputs:
+      incident_version:
+        description: Simulated affected Beta version without the v prefix
+        required: true
+        default: 0.3.0-beta.1
+        type: string
+      recovery_version:
+        description: Strictly newer recovery Beta version without the v prefix
+        required: true
+        default: 0.3.0-beta.2
+        type: string
+      recovery_revision:
+        description: Full reviewed company-main Git SHA to rebuild as the recovery version
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vivago-beta-rollback-drill-${{ github.repository }}
+  cancel-in-progress: false
+
+env:
+  INCIDENT_VERSION: ${{ inputs.incident_version }}
+  RECOVERY_VERSION: ${{ inputs.recovery_version }}
+  RECOVERY_REVISION: ${{ inputs.recovery_revision }}
+  DRILL_BRANCH: drill/marketplace-${{ github.run_id }}-${{ github.run_attempt }}
+
+jobs:
+  build:
+    name: Build affected and recovery production packages
+    if: github.repository == 'HiDream-ai/vivago-agent-cli' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GOCACHE: ${{ github.workspace }}/.ci-rollback-go-cache
+      DRILL_ROOT: ${{ github.workspace }}/.ci-rollback-build
+      SAFE_SOURCE: ${{ github.workspace }}/.ci-rollback-safe-source
+    steps:
+      - name: Check out exact incident source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: 1.25.12
+          cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Validate drill plan and recovery source
+        run: |
+          set -euo pipefail
+          python scripts/validate_beta_rollback_drill.py plan \
+            --incident-version "${INCIDENT_VERSION}" \
+            --recovery-version "${RECOVERY_VERSION}" \
+            --repository "${GITHUB_REPOSITORY}" \
+            --ref "${GITHUB_REF}" \
+            --incident-revision "${GITHUB_SHA}" \
+            --recovery-revision "${RECOVERY_REVISION}" \
+            --branch "${DRILL_BRANCH}" \
+            --run-id "${GITHUB_RUN_ID}" \
+            --run-attempt "${GITHUB_RUN_ATTEMPT}"
+          git cat-file -e "${RECOVERY_REVISION}^{commit}"
+          git merge-base --is-ancestor "${RECOVERY_REVISION}" "${GITHUB_SHA}"
+
+      - name: Record drill start
+        run: |
+          mkdir -p "${DRILL_ROOT}"
+          date +%s > "${DRILL_ROOT}/started-at-epoch"
+
+      - name: Build simulated affected production Marketplace
+        run: |
+          set -euo pipefail
+          python scripts/build_beta_binaries.py \
+            --output "${DRILL_ROOT}/incident-binaries" \
+            --version "${INCIDENT_VERSION}" \
+            --source-revision "${GITHUB_SHA}"
+          python scripts/assemble_beta_distribution.py \
+            --plugin-template plugin \
+            --binary-root "${DRILL_ROOT}/incident-binaries" \
+            --output "${DRILL_ROOT}/incident-marketplace" \
+            --version "${INCIDENT_VERSION}" \
+            --source-revision "${GITHUB_SHA}"
+          python scripts/verify_beta_distribution.py \
+            --marketplace "${DRILL_ROOT}/incident-marketplace" \
+            --version "${INCIDENT_VERSION}" \
+            --source-revision "${GITHUB_SHA}"
+
+      - name: Build recovery production Marketplace from the safe source
+        run: |
+          set -euo pipefail
+          git worktree add --detach "${SAFE_SOURCE}" "${RECOVERY_REVISION}"
+          python "${SAFE_SOURCE}/scripts/build_beta_binaries.py" \
+            --output "${DRILL_ROOT}/recovery-binaries" \
+            --version "${RECOVERY_VERSION}" \
+            --source-revision "${RECOVERY_REVISION}"
+          python "${SAFE_SOURCE}/scripts/assemble_beta_distribution.py" \
+            --plugin-template "${SAFE_SOURCE}/plugin" \
+            --binary-root "${DRILL_ROOT}/recovery-binaries" \
+            --output "${DRILL_ROOT}/recovery-marketplace" \
+            --version "${RECOVERY_VERSION}" \
+            --source-revision "${RECOVERY_REVISION}"
+          python scripts/verify_beta_distribution.py \
+            --marketplace "${DRILL_ROOT}/recovery-marketplace" \
+            --version "${RECOVERY_VERSION}" \
+            --source-revision "${RECOVERY_REVISION}"
+          git worktree remove --force "${SAFE_SOURCE}"
+
+      - name: Create mode-preserving drill archives
+        run: |
+          set -euo pipefail
+          tar -C "${DRILL_ROOT}/incident-marketplace" -czf \
+            "${DRILL_ROOT}/incident-marketplace.tar.gz" .
+          tar -C "${DRILL_ROOT}/recovery-marketplace" -czf \
+            "${DRILL_ROOT}/recovery-marketplace.tar.gz" .
+
+      - name: Upload private drill inputs
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: beta-rollback-drill-input-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ env.DRILL_ROOT }}/incident-marketplace.tar.gz
+            ${{ env.DRILL_ROOT }}/recovery-marketplace.tar.gz
+            ${{ env.DRILL_ROOT }}/started-at-epoch
+          if-no-files-found: error
+          retention-days: 7
+
+  drill:
+    name: Fast-forward temporary Marketplace to recovery
+    needs: build
+    if: github.repository == 'HiDream-ai/vivago-agent-cli' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      DRILL_ROOT: ${{ github.workspace }}/.ci-rollback-run
+    steps:
+      - name: Check out exact incident source with push credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Download private drill inputs
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: beta-rollback-drill-input-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.DRILL_ROOT }}/input
+
+      - name: Extract both Marketplace packages
+        run: |
+          set -euo pipefail
+          mkdir -p "${DRILL_ROOT}/incident" "${DRILL_ROOT}/recovery"
+          tar -C "${DRILL_ROOT}/incident" -xzf \
+            "${DRILL_ROOT}/input/incident-marketplace.tar.gz"
+          tar -C "${DRILL_ROOT}/recovery" -xzf \
+            "${DRILL_ROOT}/input/recovery-marketplace.tar.gz"
+
+      - name: Push affected package, fast-forward recovery, and clean branch
+        run: |
+          set -euo pipefail
+          python scripts/run_beta_rollback_drill.py \
+            --incident-marketplace "${DRILL_ROOT}/incident" \
+            --recovery-marketplace "${DRILL_ROOT}/recovery" \
+            --incident-version "${INCIDENT_VERSION}" \
+            --recovery-version "${RECOVERY_VERSION}" \
+            --repository "${GITHUB_REPOSITORY}" \
+            --ref "${GITHUB_REF}" \
+            --incident-revision "${GITHUB_SHA}" \
+            --recovery-revision "${RECOVERY_REVISION}" \
+            --branch "${DRILL_BRANCH}" \
+            --run-id "${GITHUB_RUN_ID}" \
+            --run-attempt "${GITHUB_RUN_ATTEMPT}" \
+            --remote origin \
+            --repository-root "${GITHUB_WORKSPACE}" \
+            --started-at-epoch "$(tr -d '\r\n' < "${DRILL_ROOT}/input/started-at-epoch")" \
+            --report "${DRILL_ROOT}/rollback-report.json"
+
+      - name: Cleanup temporary branch again after any failure
+        if: always()
+        run: |
+          set -euo pipefail
+          set +e
+          git ls-remote --exit-code --heads origin "refs/heads/${DRILL_BRANCH}" >/dev/null 2>&1
+          lookup_status=$?
+          set -e
+          case "${lookup_status}" in
+            0) git push origin --delete "${DRILL_BRANCH}" ;;
+            2) ;;
+            *) exit "${lookup_status}" ;;
+          esac
+          set +e
+          git ls-remote --exit-code --heads origin "refs/heads/${DRILL_BRANCH}" >/dev/null 2>&1
+          verify_status=$?
+          set -e
+          if [ "${verify_status}" -ne 2 ]; then
+            printf 'temporary drill branch cleanup could not be confirmed\n' >&2
+            exit 1
+          fi
+
+      - name: Upload privacy-safe rollback report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: beta-rollback-drill-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.DRILL_ROOT }}/rollback-report.json
+          if-no-files-found: warn
+          retention-days: 14

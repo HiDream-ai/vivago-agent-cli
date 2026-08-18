@@ -80,6 +80,8 @@ Cleanup Job 使用确定性分支名，不依赖前序 Job 输出：
 - 源码仓库、正式 Tag、Release 和 `marketplace` 保持不变。
 
 如果 Runner 被强制终止导致 Cleanup 没有执行，运行手册给出按准确分支名人工删除和复核的命令。
+运行手册位于
+[`vivago-agent-cli-beta-rollback-runbook.md`](../vivago-agent-cli-beta-rollback-runbook.md)。
 
 ### 6. 验证和记录结果
 

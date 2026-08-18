@@ -19,6 +19,7 @@
 - 临时分支使用真实公司 GitHub 写入，验证后自动删除；
 - 不创建正式 Tag、Release 或 `marketplace`，不修改仓库可见性；
 - 生产日志只做隐私安全的聚合查询，不保存原始业务日志；
+- 运行手册只提供聚合 LogQL 模板，实际海外生产 stream selector 由 VivagoAgent 运维负责人确认，CLI 仓库不硬编码；
 - 服务端版本阻断不在 CLI 仓库中猜测实现，GitHub 演练结束后停下来请 VivagoAgent 或网关负责人确认。
 
 ## 明确不做

@@ -432,6 +432,39 @@ class GitHubWorkflowContractTests(unittest.TestCase):
         self.assertNotIn("Reject an existing immutable release tag", text)
         self.assertNotIn("release tag already exists and will not be overwritten", text)
 
+    def test_beta_rollback_drill_is_manual_temporary_and_self_cleaning(self) -> None:
+        text = _workflow("beta-rollback-drill.yml")
+
+        self.assertRegex(text, r"(?m)^on:\n  workflow_dispatch:\s*$")
+        self.assertNotRegex(text, r"(?m)^  (push|pull_request):")
+        self.assertIn("github.repository == 'HiDream-ai/vivago-agent-cli'", text)
+        self.assertIn("github.ref == 'refs/heads/main'", text)
+        self.assertRegex(text, r"(?m)^permissions:\n  contents: read\s*$")
+        self.assertRegex(text, r"(?m)^    permissions:\n      contents: write\s*$")
+        self.assertIn("scripts/validate_beta_rollback_drill.py", text)
+        self.assertIn("scripts/run_beta_rollback_drill.py", text)
+        self.assertIn("scripts/build_beta_binaries.py", text)
+        self.assertIn("scripts/assemble_beta_distribution.py", text)
+        self.assertIn("scripts/verify_beta_distribution.py", text)
+        self.assertIn("git merge-base --is-ancestor", text)
+        self.assertIn("drill/marketplace-${{ github.run_id }}-${{ github.run_attempt }}", text)
+        self.assertIn("if: always()", text)
+        self.assertIn("git push origin --delete", text)
+        self.assertNotRegex(text, r"(?m)^\s*git push[^\n]*--force(?:-with-lease)?(?:\s|$)")
+        for forbidden in (
+            "gh release create",
+            "git tag",
+            "HEAD:marketplace",
+            "production-beta",
+            "VIVAGO_E2E_TICKET",
+        ):
+            self.assertNotIn(forbidden, text)
+
+        action_refs = re.findall(r"uses:\s*[^\s@]+@([^\s#]+)", text)
+        self.assertTrue(action_refs)
+        for reference in action_refs:
+            self.assertRegex(reference, r"^[0-9a-f]{40}$")
+
 
 if __name__ == "__main__":
     unittest.main()

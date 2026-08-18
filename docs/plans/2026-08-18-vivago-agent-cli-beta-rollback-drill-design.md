@@ -79,6 +79,10 @@ Actions Artifact 保存，不提交生成的二进制或 Marketplace 到源码�
 本次只做只读查询和运行手册，不修改生产告警。原始日志可能包含业务请求信息，演练记录只保存
 聚合结果，不复制原始日志。
 
+具体执行步骤和隐私安全的聚合查询模板见
+[`vivago-agent-cli-beta-rollback-runbook.md`](../vivago-agent-cli-beta-rollback-runbook.md)。部署使用的
+Loki stream selector 由 VivagoAgent 运维负责人确认，CLI 仓库不硬编码生产日志标签。
+
 ## 还缺的服务端能力
 
 CLI 已发送 `X-Client-Version`，VivagoAgent 也会把版本写入请求日志，但当前源码中没有找到针对
