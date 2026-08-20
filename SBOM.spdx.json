@@ -1,0 +1,717 @@
+{
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "creationInfo": {
+    "created": "2026-08-20T09:44:33Z",
+    "creators": [
+      "Tool: vivago-agent-cli-sbom-generator"
+    ]
+  },
+  "dataLicense": "CC0-1.0",
+  "documentNamespace": "https://github.com/HiDream-ai/vivago-agent-cli/sbom/0.3.0-beta.2/e72293750560af88582feb568346a6efc029341f",
+  "files": [
+    {
+      "SPDXID": "SPDXRef-File-607182263023ff5be1fa",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "ca5c370676034281e493c76ced1312afc6605268925a29ea54584bbd59edcc1e"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "./.agents/plugins/marketplace.json",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-5352ee4067f17e7948e1",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "9845d10af93288674a21f0a174547899f3ec56cfc512337883bbfe43d9bab982"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "./.claude-plugin/marketplace.json",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-7634f93cb2617b992d9b",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "fe2543612c7d24c9638763f4a1108361dafecb1c98dd16f513eae95fef1fcff5"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "./plugins/vivago-agent-cli/.claude-plugin/plugin.json",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-6e5c6cb1f6ac60a0f020",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "188362aff35975fde9b19b74ebd37dc0a4f600a766cc80d944bc14dd5b3f3ae2"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "./plugins/vivago-agent-cli/.codex-plugin/plugin.json",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-14cc2349445d00cedb4a",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "669a5de7af4e6e89d5c487514f2fc0f06a7ad812501ede2e537b52e12568dab7"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "./plugins/vivago-agent-cli/BUILD_INFO.json",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-43c05ccb415afe28eb71",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "e0338afafbebc6321837f953414a37ba7b3c6f5faaf45c82716e6c43d442044f"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "./plugins/vivago-agent-cli/LICENSE",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-b6e3c31047baff124369",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "70ce37f3c9ac2d0e7e40d88f02d2c31f1a3b36c39c428f98ae7270fbe2259c3e"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "./plugins/vivago-agent-cli/NOTICE",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-4d4552678281ac16ada7",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "33609fe922cdfe8b3ae37794cfef091aff5f26e2970abeba058af6f419d97351"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "./plugins/vivago-agent-cli/SHA256SUMS",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-8c2001bff0986b07a9d9",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "b84c12531e92a11b7e3cea52cc1a28a4fbb9083289ba847b54d55de07699a611"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "./plugins/vivago-agent-cli/THIRD_PARTY_LICENSES.md",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-e2231a3e6534d599fdd4",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "89720dc996865bf908b596462529682d0f58e4483c747ca86d4699da6c7ee518"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "./plugins/vivago-agent-cli/VERSION",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-3b63073afebcccb9aeec",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "1353288c951e36899a084b91f5bfe680f07a7125ed9290b0ecdeca917389aedf"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "./plugins/vivago-agent-cli/assets/README.md",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-a0a308e5f927912660cc",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "b89efd3c962e71bd36fc304a1683f464d1bca7be74e378c32d22aecc9b7420c9"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "./plugins/vivago-agent-cli/assets/vivago-agent-icon.png",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-d2dc9ff14c5a2ba4123c",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "0dffa9416e4ed0ef03c9ab80c5e49f37d4f9810de1bd590a45769e1111e2ae95"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "./plugins/vivago-agent-cli/assets/vivago-agent-icon.svg",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-b55dc8f03c84fcabd4c0",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "56861f5b9b15a10f44a1d49c1503947082e2f691eec060865273b18615d632b7"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "./plugins/vivago-agent-cli/assets/vivago-agent-logo-dark.png",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-9489db47e700f4c1a87d",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "559123980515a4eab587e313edef002da08f84618715000240dc1bf6d8265cdc"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "./plugins/vivago-agent-cli/assets/vivago-agent-logo-dark.svg",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-53e5f3cefa9d8595c424",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "29353c352e70e5fe2a2a7dbcd7990434f23700402414f663e77ec00b9bb4220f"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "./plugins/vivago-agent-cli/assets/vivago-agent-logo.png",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-490358413344d8cb34d7",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "6daddafdcf49baecd04df80673c472ff6de7c262cd4b26c4bfd2dfb492de5aa1"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "./plugins/vivago-agent-cli/assets/vivago-agent-logo.svg",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-e6a4cdac6173cd3e1455",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "73aa31f59de138e5c0f53171885daaf67d5166ab2453772206e9408c5caf3cf7"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "./plugins/vivago-agent-cli/bin/darwin-amd64/vivago-agent",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-c37e6d2688daf5aa4d50",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "b3b3e5d375d9829292d429baeca276a7e7fd6b60403eb547f325e4ea4c2f6426"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "./plugins/vivago-agent-cli/bin/darwin-arm64/vivago-agent",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-b1103deb34af6c57f804",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "83bc47288f6ac65d007f597006057a862222d3ab0776e246444d6c340f84d146"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "./plugins/vivago-agent-cli/bin/linux-amd64/vivago-agent",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-2cd8f158f6b2fa607340",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "75af5eec4c994966f9c455e6418fdf8b374fdb35292dd88e38bb866a20307c2c"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "./plugins/vivago-agent-cli/bin/linux-arm64/vivago-agent",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-700481d0e84dd6686966",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "4926a44f85c5df197325221b31659bc967ed34daa165bb652508081603f2ad0f"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "./plugins/vivago-agent-cli/bin/windows-amd64/vivago-agent.exe",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-4dbc7fac361a3c9f0de8",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "c6002177bbf0c1733843a6595d46ebd7048dd97c26538e7c7b54cf3e69cb7446"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "./plugins/vivago-agent-cli/bin/windows-arm64/vivago-agent.exe",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-a1ce67649e70de27cc2c",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "befc7124f3eeca37e40c30f6f716e1bac9e8ae175bf2faa73bb8491763c0c294"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "./plugins/vivago-agent-cli/skills/vivago-agent-cli/SKILL.md",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-9671d7dbef74b110c3a2",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "a83f57cda25f23a8f53e41f0ff39e3406ac18e465b1aff40e0196be640b176d4"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "./plugins/vivago-agent-cli/skills/vivago-agent-cli/agents/openai.yaml",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-d904818bd2c0246e3f2c",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "53e5671c535e8a16e899d64cc4c891fdcb2e992653c231d95b53df0e7dbc010d"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "./plugins/vivago-agent-cli/skills/vivago-agent-cli/references/brief-guide.md",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-8b1e4a59f8f271074cd5",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "3012ab65a44fab692ef5f5dc2d7aba13d145f15095094fc5aca672cd1e4b9281"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "./plugins/vivago-agent-cli/skills/vivago-agent-cli/references/capability-limits.md",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-3cb8f5d115098d6993ac",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "0ecfb8e4d58037819be212141eabd9e313f018d3d505d8b42fc68a26bf9c3d33"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "./plugins/vivago-agent-cli/skills/vivago-agent-cli/references/delivery-playbook.md",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-8fb6ade9c29c2834875b",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "b8bad4934215a2d54a30a2b084c994759967f57d697cb8e411c9fc8d52b7c935"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "./plugins/vivago-agent-cli/skills/vivago-agent-cli/references/output-shapes.md",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-db285730d4f86590690a",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "985de9e4d1967df41f669ea7d1fe1a505135bc16c86e33e65838ae281b697d8f"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "./plugins/vivago-agent-cli/skills/vivago-agent-cli/references/recovery-runbook.md",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-1f588565fd1fe0d32807",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "dedeab43f970999cb3f9d402187fc233f97b25af3ead5f86827118474733bdda"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "./plugins/vivago-agent-cli/skills/vivago-agent-cli/scripts/vivago-agent",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-599972bc0fb764e6214b",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "83438dc8633070c8c2b866d6bef3b3b73abe7363c3cebd37595f5a87942df1c2"
+        }
+      ],
+      "copyrightText": "NOASSERTION",
+      "fileName": "./plugins/vivago-agent-cli/skills/vivago-agent-cli/scripts/vivago-agent.cmd",
+      "licenseConcluded": "NOASSERTION"
+    }
+  ],
+  "name": "vivago-agent-cli-0.3.0-beta.2",
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Package-VivagoAgent-CLI",
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:golang/github.com/HiDream-ai/vivago-agent-cli@0.3.0-beta.2",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "Apache-2.0",
+      "name": "github.com/HiDream-ai/vivago-agent-cli",
+      "versionInfo": "0.3.0-beta.2"
+    },
+    {
+      "SPDXID": "SPDXRef-GoPackage-86ee06b8c627e7c43439",
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:golang/github.com/danieljoos/wincred@v1.2.3",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "github.com/danieljoos/wincred",
+      "versionInfo": "v1.2.3"
+    },
+    {
+      "SPDXID": "SPDXRef-GoPackage-65a846c6c827f5845329",
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:golang/github.com/godbus/dbus/v5@v5.2.2",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "github.com/godbus/dbus/v5",
+      "versionInfo": "v5.2.2"
+    },
+    {
+      "SPDXID": "SPDXRef-GoPackage-cf0c89f5aa00bf6983b4",
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:golang/github.com/gofrs/flock@v0.13.0",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "github.com/gofrs/flock",
+      "versionInfo": "v0.13.0"
+    },
+    {
+      "SPDXID": "SPDXRef-GoPackage-3ce85a31f441277d6866",
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:golang/github.com/zalando/go-keyring@v0.2.8",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "github.com/zalando/go-keyring",
+      "versionInfo": "v0.2.8"
+    },
+    {
+      "SPDXID": "SPDXRef-GoPackage-98ccdb46b21ea1a701f7",
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:golang/golang.org/x/sys@v0.37.0",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "golang.org/x/sys",
+      "versionInfo": "v0.37.0"
+    },
+    {
+      "SPDXID": "SPDXRef-PythonPackage-16ff6129ed95cbf93621",
+      "copyrightText": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:pypi/pyyaml@6.0.3",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "name": "PyYAML",
+      "versionInfo": "6.0.3"
+    }
+  ],
+  "relationships": [
+    {
+      "relatedSpdxElement": "SPDXRef-Package-VivagoAgent-CLI",
+      "relationshipType": "DESCRIBES",
+      "spdxElementId": "SPDXRef-DOCUMENT"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-GoPackage-86ee06b8c627e7c43439",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-GoPackage-65a846c6c827f5845329",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-GoPackage-cf0c89f5aa00bf6983b4",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-GoPackage-3ce85a31f441277d6866",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-GoPackage-98ccdb46b21ea1a701f7",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-PythonPackage-16ff6129ed95cbf93621",
+      "relationshipType": "DEPENDS_ON",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-607182263023ff5be1fa",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-5352ee4067f17e7948e1",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-7634f93cb2617b992d9b",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-6e5c6cb1f6ac60a0f020",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-14cc2349445d00cedb4a",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-43c05ccb415afe28eb71",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-b6e3c31047baff124369",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-4d4552678281ac16ada7",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-8c2001bff0986b07a9d9",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-e2231a3e6534d599fdd4",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-3b63073afebcccb9aeec",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-a0a308e5f927912660cc",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-d2dc9ff14c5a2ba4123c",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-b55dc8f03c84fcabd4c0",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-9489db47e700f4c1a87d",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-53e5f3cefa9d8595c424",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-490358413344d8cb34d7",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-e6a4cdac6173cd3e1455",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-c37e6d2688daf5aa4d50",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-b1103deb34af6c57f804",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-2cd8f158f6b2fa607340",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-700481d0e84dd6686966",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-4dbc7fac361a3c9f0de8",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-a1ce67649e70de27cc2c",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-9671d7dbef74b110c3a2",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-d904818bd2c0246e3f2c",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-8b1e4a59f8f271074cd5",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-3cb8f5d115098d6993ac",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-8fb6ade9c29c2834875b",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-db285730d4f86590690a",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-1f588565fd1fe0d32807",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    },
+    {
+      "relatedSpdxElement": "SPDXRef-File-599972bc0fb764e6214b",
+      "relationshipType": "CONTAINS",
+      "spdxElementId": "SPDXRef-Package-VivagoAgent-CLI"
+    }
+  ],
+  "spdxVersion": "SPDX-2.3"
+}

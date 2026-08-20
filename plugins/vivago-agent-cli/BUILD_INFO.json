@@ -1,0 +1,14 @@
+{
+  "version": "0.3.0-beta.2",
+  "source_revision": "e72293750560af88582feb568346a6efc029341f",
+  "channel": "beta",
+  "profile": "prod",
+  "targets": [
+    "darwin-arm64",
+    "darwin-amd64",
+    "linux-arm64",
+    "linux-amd64",
+    "windows-arm64",
+    "windows-amd64"
+  ]
+}

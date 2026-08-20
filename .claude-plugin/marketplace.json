@@ -1,0 +1,17 @@
+{
+  "name": "vivago",
+  "owner": {
+    "name": "HiDream"
+  },
+  "metadata": {
+    "description": "Marketplace for the cross-platform VivagoAgent Go CLI."
+  },
+  "plugins": [
+    {
+      "name": "vivago-agent-cli",
+      "source": "./plugins/vivago-agent-cli",
+      "description": "Delegate creative tasks through the bundled VivagoAgent Go CLI.",
+      "version": "0.3.0-beta.2"
+    }
+  ]
+}
