@@ -396,8 +396,11 @@ class GitHubWorkflowContractTests(unittest.TestCase):
         self.assertRegex(text, r"(?m)^    permissions:\n      contents: write\s*$")
         self.assertIn("gh release create", text)
         self.assertIn("--prerelease", text)
-        self.assertRegex(text, r"git[^\n]* push origin HEAD:marketplace")
-        self.assertNotIn("--force", text)
+        self.assertIn("scripts/publish_marketplace_snapshot.py", text)
+        self.assertIn('--branch "marketplace"', text)
+        self.assertIn('--channel "beta"', text)
+        self.assertNotRegex(text, r"git[^\n]* push origin HEAD:marketplace")
+        self.assertNotIn("git worktree add", text)
         self.assertIn("tag_lookup_status=$?", text)
         self.assertIn("case \"${tag_lookup_status}\" in", text)
         self.assertIn("cancel-in-progress: false", text)
@@ -432,11 +435,18 @@ class GitHubWorkflowContractTests(unittest.TestCase):
         text = _workflow("beta-release.yml")
 
         self.assertIn("scripts/validate_beta_release_state.py", text)
-        self.assertIn("scripts/validate_beta_marketplace_update.py", text)
+        self.assertIn("scripts/publish_marketplace_snapshot.py", text)
         self.assertIn("gh release view", text)
         self.assertIn("steps.release_state.outputs.create_release == 'true'", text)
-        self.assertIn("refs/heads/marketplace", text)
-        self.assertIn("checkout --orphan marketplace", text)
+        self.assertIn('--branch "marketplace"', text)
+        self.assertIn('--channel "beta"', text)
+        self.assertLess(
+            text.index("gh release create"),
+            text.index("scripts/publish_marketplace_snapshot.py"),
+        )
+        self.assertNotIn("scripts/validate_beta_marketplace_update.py", text)
+        self.assertNotIn("checkout --orphan marketplace", text)
+        self.assertNotIn("MARKETPLACE_WORKTREE", text)
         self.assertNotIn("Reject an existing immutable release tag", text)
         self.assertNotIn("release tag already exists and will not be overwritten", text)
 

@@ -50,5 +50,11 @@ python scripts/verify_dev_distribution.py \
 `dev-marketplace` 更新为当前版本的无父提交快照。该分支不积累旧版本二进制；旧版本由不可变
 Prerelease 保存。工作流不接受 profile 或环境地址输入。
 
+2026-08-20 的个人通道实测中，切换前 `dev.8` 有 6 个可达提交和 252,698,711 字节可达 Blob；
+`dev.10` 发布后只有 1 个无父提交和 42,395,079 字节可达 Blob。`dev.10` 同时通过六平台 ×
+Codex/Claude Code 的 12/12 生命周期测试。这个变化只清理安装分支的旧二进制历史，不减少当前
+六平台包，也不删除 `dev.9`、`dev.10` 的 Prerelease 资产。
+
 开发包名称固定为 `vivago-dev`，不得改名冒充公开 `vivago`。真正的 prod/Beta 组装由公司 GitHub CI
-另行实现，只能从公司受保护 Tag 以 `prod` profile 重新构建，不能复用这里生成的任何二进制。
+另行实现，只能从公司 `main` 的受评审源码以 `prod` profile 重新构建，发布后再创建受保护 Tag 和
+Prerelease，不能复用这里生成的任何二进制。

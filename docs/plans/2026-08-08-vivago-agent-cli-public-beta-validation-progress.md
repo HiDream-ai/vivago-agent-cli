@@ -1,16 +1,40 @@
 # VivagoAgent CLI 公开 Beta 总进度
 
-更新时间：2026-08-18
+更新时间：2026-08-20
 
 | 项目 | 当前状态 |
 | --- | --- |
 | 长期源码分支 | `main` |
-| 开发版本 | `0.3.0-dev.8` |
+| 开发版本 | `0.3.0-dev.10` |
 | 首个生产候选 | `0.3.0-beta.1` |
 | 环境 | 海外测试（`profile=dev`）和海外生产（`profile=prod`） |
 | 公司源码仓库是否公开 | **是**（`HiDream-ai/vivago-agent-cli`） |
 | Beta Release 是否已经公开发布 | **是**（`v0.3.0-beta.1`） |
-| 当前进行到 | **首个公开 Beta 已发布，进入生产观察期** |
+| 当前进行到 | **首个公开 Beta 观察中；安装分支历史控制已通过个人通道实测，等待公司代码和权限门禁** |
+
+### 2026-08-20 Marketplace 历史控制
+
+个人 GitHub 已连续完成 `dev.9` 和 `dev.10` 快照更新。`dev.10` 的
+[Manual Development Release #32349867792](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/32349867792)
+通过全部构建和 12/12 Codex/Claude Code 宿主生命周期，并由 GitHub Actions 自动创建 Prerelease、
+更新 `dev-marketplace`。
+
+| 项目 | 切换前 `dev.8` | 当前 `dev.10` |
+|---|---:|---:|
+| 可达提交 | 6 | 1 |
+| HEAD 父提交 | 1 | 0 |
+| 可达 Blob | 252,698,711 字节 | 42,395,079 字节 |
+| 当前安装包 | 六平台自包含 | 六平台自包含 |
+
+两次失败也已经保留为排查证据：第一次 `dev.9` 在临时仓库内直接推送，拿不到调用仓库的 remote 和
+Actions 认证；修复后改为从已认证的调用仓库推送快照 SHA。第二次用修复后的新提交重跑同一个
+`dev.9`，被不可变 Release 的源码 SHA 校验拒绝，这是预期保护。随后使用摘要匹配的 `dev.9`
+原始 Release 包补齐安装分支，再由 `dev.10` 完成完整自动化验证。
+
+公司 `.github/workflows/beta-release.yml` 已改用同一快照脚本，旧 worktree 快进发布已移除。本次没有
+触发新的生产 Beta。2026-08-20 只读检查显示公司仓库没有 ruleset，`marketplace` 也没有分支保护；
+因此代码可以继续评审，但不能直接启用新的 Beta 快照发布。下一步是完成本地全量回归，由仓库管理员
+配置受控强推和人员写入限制，再通过 PR、Beta Check 和下一次正式发布验证公司通道。
 
 ### 2026-08-18 最新状态
 
@@ -87,18 +111,18 @@ CLI 修复已提交到个人 GitHub `main`（`5f75b14`），并随提交 `15f6fc
 
 | 顺序 | 下一项工作 | 谁处理 | 是否需要你现在介入 |
 | ---: | --- | --- | --- |
-| 1 | 个人 GitHub dev CI 验证 CLI 修复并生成开发产物 | **已完成**；[Development CI #32101640741](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/32101640741) | 无 |
-| 2 | 将同一 CLI 提交同步到公司 GitHub `main`，运行 Beta Check | **已完成，Beta Check 已通过** | 同一提交 `15f6fc6` 已推送到公司 `main`；[Beta Check #32105851320](https://github.com/HiDream-ai/vivago-agent-cli/actions/runs/32105851320) 全绿 | 不触发发布；进入公开治理确认 |
-| 3 | 发布窗口确认海外生产 Loki stream selector | VivagoAgent 发布执行人 | 发布前确认，不阻塞当前代码开发 |
-| 4 | 审批仓库公开和首个 Beta 发布 | 公司管理员/发布人 | 仓库公开已完成；Beta Release 仍需手动运行并批准 |
+| 1 | 个人通道连续快照和双宿主验证 | **已完成**；dev.10 运行 12/12 通过，安装分支为单提交 | 无 |
+| 2 | 将历史控制改动通过 PR 和 Beta Check 进入公司 `main` | CLI 维护者 | 合并前需要正常评审；本次不触发生产发布 |
+| 3 | 配置公司 `marketplace` 只允许发布 Workflow 受控改写 | 公司仓库管理员 | **需要介入**；当前 ruleset 为空且分支未保护，不得先发布再补规则 |
+| 4 | 下一次 Beta 发布验证公司快照分支并继续生产观察 | 公司发布人 | 使用新的 `beta.N`；检查 Release、attestation、单提交快照和生产指标 |
 
 ## 已经验证了哪些能力（L0–L3）
 
 | 层级 | 主要验证什么 | 当前结果 | 状态 | 关键证据 | 还缺什么 |
 | --- | --- | ---: | --- | --- | --- |
-| L0 | 六平台交叉编译、Marketplace 组装、checksum、环境地址扫描和静态门禁 | 6/6 | 已通过 | [Development Release #31484366464](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/31484366464)、[v0.3.0-dev.8](https://github.com/ChaoXia-Beginer/vivago-agent-cli/releases/tag/v0.3.0-dev.8) | 代码签名和公证不属于首个 Beta 阻断项 |
-| L1 | 在真实 OS/CPU Runner 上启动对应二进制，验证 launcher、`version` 和 `doctor` | 6/6 | 已通过 | dev.8 发布门禁的六平台原生报告 | 六个平台均为真实目标 Runner，不使用兼容层代替 |
-| L2 | Codex/Claude Code 插件安装、发现、升级、回滚、再升级 | 12/12 | 已通过 | [Development Release #31484366464](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/31484366464)，12 份脱敏报告 | 宿主模型主动选择 Skill 另行验证；本轮仅验证 Codex |
+| L0 | 六平台交叉编译、Marketplace 组装、checksum、环境地址扫描和静态门禁 | 6/6 | 已通过 | [Development Release #32349867792](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/32349867792)、[v0.3.0-dev.10](https://github.com/ChaoXia-Beginer/vivago-agent-cli/releases/tag/v0.3.0-dev.10) | 代码签名和公证不属于首个 Beta 阻断项 |
+| L1 | 在真实 OS/CPU Runner 上启动对应二进制，验证 launcher、`version` 和 `doctor` | 6/6 | 已通过 | dev.10 发布门禁的六平台原生报告 | 六个平台均为真实目标 Runner，不使用兼容层代替 |
+| L2 | Codex/Claude Code 插件安装、发现、升级、回滚、再升级 | 12/12 | 已通过 | [Development Release #32349867792](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/32349867792)，12 份脱敏报告 | 宿主模型主动选择 Skill 另行验证；本轮仅验证 Codex |
 | L3 | 通过安装后的插件 CLI 调用真实 VivagoAgent Web API，验证任务、SSE、附件和产物 | Dev 12/12；Prod 1/1 | 代表范围已通过 | [Dev Hosted L3 #31232383974](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/31232383974)；[Production Attachment Smoke #32024362266](https://github.com/HiDream-ai/vivago-agent-cli/actions/runs/32024362266) | 生产只验证 macOS ARM64/Codex；Claude Code 模型调用本轮不验 |
 
 这里的计数口径不同：L0/L1 按六个平台计数，L2/L3 按“六个平台 × 两个宿主”计数。
@@ -125,18 +149,18 @@ CLI 修复已提交到个人 GitHub `main`（`5f75b14`），并随提交 `15f6fc
 | L2 | 在每个平台分别安装 Codex 和 Claude Code，通过官方插件命令做安装、升级、回滚和再升级 | 12 个组合的四个阶段都找到正确插件缓存和 launcher，`doctor_exit=0` | 插件包能被两个宿主正确安装和维护 | 不登录宿主模型，也不提交 VivagoAgent 业务任务 |
 | L3 | 向 Runner 注入一次性 VivagoAgent ticket，安装插件后直接调用其 launcher 提交真实任务 | 两个宿主路径均完成任务、附件、SSE 恢复、产物、取消、历史和重启检查 | 插件 CLI 到 VivagoAgent 的真实在线业务路径可用 | 本轮不证明标准登录、模型自动选 Skill、数据库字段持久化或 Web UI 展示 |
 
-## 开发版 dev.8 验证基线
+## 开发版 dev.10 发布基线
 
 | 项目 | 当前值 |
 | --- | --- |
-| 开发版本 | [`v0.3.0-dev.8`](https://github.com/ChaoXia-Beginer/vivago-agent-cli/releases/tag/v0.3.0-dev.8) |
-| Marketplace 源码 | `72fb98d5b3d88058033fc1b04d1a262866524468` |
+| 开发版本 | [`v0.3.0-dev.10`](https://github.com/ChaoXia-Beginer/vivago-agent-cli/releases/tag/v0.3.0-dev.10) |
+| Marketplace 源码 | `2f78389a232298e85a790e0e53259a7c2fe0c774` |
 | L3 工作流源码 | `ce633432adf922e31deb28a6fa297ec0831fcc75` |
 | Codex CLI | `0.147.0` |
 | Claude Code | `2.1.220` |
 | API 目标 | `https://dev.vivago.ai`，编译期固定，不提供运行时 `--env` 切换 |
 | 请求归属 | `X-Source: cli`、`X-Client-Platform: web` |
-| 发布运行 | [Manual Development Release #31484366464](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/31484366464) |
+| 发布运行 | [Manual Development Release #32349867792](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/32349867792) |
 | 最终 L3 运行 | [Manual Hosted L3 #31232383974](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/31232383974) |
 | 个人 main 对齐后 CI | [Development CI #31485750215](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/31485750215) |
 | 公司 main Beta Check | [Beta Check #31483042861](https://github.com/HiDream-ai/vivago-agent-cli/actions/runs/31483042861) |
@@ -218,14 +242,15 @@ L0 先回答“六个平台的包能不能稳定构建出来”。它不依赖�
 | Go prod 测试 | PASS | `go test -tags prod ./...` |
 | Race | PASS | `go test -race ./...` |
 | Vet | PASS | `go vet ./...` |
-| Python 验证器测试 | 118/118 PASS | 包含 Dev/Beta workflow、六平台、双宿主、供应链、生产 Secret边界和 L3 报告契约 |
+| Python 验证器测试 | 142/142 PASS | 包含 Dev/Beta workflow、快照历史、六平台、双宿主、供应链、生产 Secret 边界和 L3 报告契约 |
 | Codex 官方本地校验 | PASS | 插件 manifest 和目录结构有效 |
 | Claude 插件校验 | PASS | Claude Code 能识别插件结构 |
 | 六平台构建 | 6/6 PASS | darwin/linux/windows × arm64/amd64 |
 | Marketplace 和 checksum | PASS | 发布产物与 `BUILD_INFO.json` 一致 |
 | 环境地址扫描 | PASS | dev 包保持海外测试环境，不混入生产地址 |
 
-`v0.3.0-dev.8` Release 指向 `72fb98d...`，包含一份完整开发 Marketplace；对应运行还上传了 12 份 L2 生命周期报告。
+`v0.3.0-dev.10` Release 指向 `2f78389...`，包含一份完整开发 Marketplace；对应运行还上传了
+12 份 L2 生命周期报告。`dev-marketplace` 当前只有一个无父提交，旧版本继续由不可变 Release 保存。
 
 ## L1：六平台原生 CLI
 
@@ -254,10 +279,10 @@ L2 使用 Codex 和 Claude Code 的官方插件管理命令，不直接复制插
 
 | 阶段 | 插件版本 | 验证内容 |
 | --- | --- | --- |
-| 全新安装 | `0.3.0-dev.7` | 从开发 Marketplace 安装，定位宿主隔离目录中的 launcher，运行 `doctor` |
-| 升级 | `0.3.0-dev.8` | 更新 Marketplace 和插件，确认加载新版本 launcher |
-| 回滚 | `0.3.0-dev.7` | 回退到上一开发版本，确认旧版本仍可运行 |
-| 再升级 | `0.3.0-dev.8` | 再次升级并确认最终状态回到候选版本 |
+| 全新安装 | `0.3.0-dev.9` | 从开发 Marketplace 安装，定位宿主隔离目录中的 launcher，运行 `doctor` |
+| 升级 | `0.3.0-dev.10` | 更新被快照替换的 Marketplace 和插件，确认加载新版本 launcher |
+| 回滚 | `0.3.0-dev.9` | 使用上一版快照回退，确认旧版本仍可运行 |
+| 再升级 | `0.3.0-dev.10` | 再次刷新 Marketplace 并确认最终状态回到候选版本 |
 
 ### 当前结果
 
