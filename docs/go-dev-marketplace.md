@@ -46,8 +46,9 @@ python scripts/verify_dev_distribution.py \
 
 个人 GitHub 的 `.github/workflows/ci.yml` 自动执行上述构建、双宿主校验、checksum 与环境扫描，并上传
 模式位保持完整的压缩包。需要发布可安装版本时，从 Actions 页面手动运行 `dev-release.yml`，输入
-`0.3.0-dev.N`；它重新构建全部制品，创建 GitHub Prerelease，并以普通快进提交更新
-`dev-marketplace`。工作流不接受 profile 或环境地址输入。
+`0.3.0-dev.N`；它重新构建全部制品，创建 GitHub Prerelease，并以精确 `force-with-lease` 将
+`dev-marketplace` 更新为当前版本的无父提交快照。该分支不积累旧版本二进制；旧版本由不可变
+Prerelease 保存。工作流不接受 profile 或环境地址输入。
 
 开发包名称固定为 `vivago-dev`，不得改名冒充公开 `vivago`。真正的 prod/Beta 组装由公司 GitHub CI
 另行实现，只能从公司受保护 Tag 以 `prod` profile 重新构建，不能复用这里生成的任何二进制。

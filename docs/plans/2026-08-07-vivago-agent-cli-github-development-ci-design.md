@@ -12,7 +12,8 @@
 - Codex、Claude Code 插件校验；
 - checksum、版本来源和环境地址扫描；
 - GitHub Actions Artifact 上传；
-- 手动输入 `0.3.0-dev.N` 创建 GitHub Prerelease，并以普通快进提交更新 `dev-marketplace`。
+- 手动输入 `0.3.0-dev.N` 创建 GitHub Prerelease，并以精确 `force-with-lease` 将
+  `dev-marketplace` 更新为当前版本的无父提交快照。
 
 本期不完成：公司公开 Beta、海外正式环境冒烟、正式 Release、Hosted MCP、标准 OAuth、macOS 公证和 Windows 签名。
 
@@ -53,7 +54,7 @@
 - 拒绝海外正式、国内环境地址和测试凭证之外的可疑敏感标记；
 - GitHub Release 必须标记为 Prerelease；
 - 只允许更新 `dev-marketplace`；
-- 不强推，使用并发锁串行化开发发布；
+- 使用并发锁串行化开发发布，只允许发布机器人以准确旧 SHA 的 `force-with-lease` 更新快照；
 - 已存在的 Tag/Release 不允许覆盖；
 - Marketplace 提交记录版本和完整源码 SHA。
 
@@ -75,7 +76,8 @@
 ## 失败与恢复
 
 - 任一测试、构建、校验、checksum 或环境扫描失败，均不得进入发布 Job。
-- Marketplace 使用普通快进提交；如果远端在构建期间发生变化，推送失败并由操作者重新运行，不自动强推或覆盖。
+- Marketplace 每版创建无父提交快照；如果远端在构建期间发生变化，精确租约使推送失败并由
+  操作者确认远端状态后重新运行，不允许无租约强推或覆盖。
 - Release 和 Marketplace 发布应保留清晰的来源 SHA。出现部分完成时允许安全重试，但不覆盖已有 Tag 或资产。
 - 工作流日志不得输出登录凭证、Authorization Header、Cookie、预签名 URL 或完整敏感环境变量。
 
