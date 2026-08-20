@@ -69,13 +69,20 @@ class MarketplaceSnapshotPublishTests(unittest.TestCase):
         expected_old_revision: str | None = None,
         env: dict[str, str] | None = None,
     ) -> subprocess.CompletedProcess[str]:
+        caller = remote.parent / "publisher-caller"
+        if not caller.is_dir():
+            caller.mkdir()
+            initialized = _git("init", "--quiet", cwd=caller)
+            self.assertEqual(initialized.returncode, 0, initialized.stderr)
+            added = _git("remote", "add", "snapshot-origin", str(remote), cwd=caller)
+            self.assertEqual(added.returncode, 0, added.stderr)
         command = [
             sys.executable,
             str(PUBLISHER),
             "--marketplace",
             str(marketplace),
             "--remote",
-            str(remote),
+            "snapshot-origin",
             "--branch",
             branch,
             "--channel",
@@ -89,6 +96,7 @@ class MarketplaceSnapshotPublishTests(unittest.TestCase):
             command.extend(("--expected-old-revision", expected_old_revision))
         return subprocess.run(
             command,
+            cwd=caller,
             capture_output=True,
             text=True,
             check=False,
@@ -435,6 +443,56 @@ class MarketplaceSnapshotPublishTests(unittest.TestCase):
             )
 
             self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_named_remote_push_runs_from_authenticated_caller_repository(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            remote = self._remote(root)
+            caller = root / "caller"
+            caller.mkdir()
+            initialized = _git("init", "--quiet", cwd=caller)
+            self.assertEqual(initialized.returncode, 0, initialized.stderr)
+            added = _git("remote", "add", "origin", str(remote), cwd=caller)
+            self.assertEqual(added.returncode, 0, added.stderr)
+            marker = root / "caller-pre-push-ran"
+            hook = caller / ".git" / "hooks" / "pre-push"
+            hook.write_text(
+                "#!/bin/sh\n" f'printf called > "{marker}"\n',
+                encoding="utf-8",
+            )
+            hook.chmod(hook.stat().st_mode | 0o111)
+            revision = "f" * 40
+            candidate = self._candidate(
+                root,
+                version="0.3.0-beta.1",
+                revision=revision,
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(PUBLISHER),
+                    "--marketplace",
+                    str(candidate),
+                    "--remote",
+                    "origin",
+                    "--branch",
+                    "marketplace",
+                    "--channel",
+                    "beta",
+                    "--version",
+                    "0.3.0-beta.1",
+                    "--source-revision",
+                    revision,
+                ],
+                cwd=caller,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertTrue(marker.is_file())
 
 
 if __name__ == "__main__":

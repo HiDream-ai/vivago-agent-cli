@@ -32,15 +32,29 @@ def _arguments(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def _run(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+def _run(
+    args: list[str], *, cwd: Path | None = None, label: str
+) -> subprocess.CompletedProcess[str]:
     result = subprocess.run(args, cwd=cwd, capture_output=True, text=True, check=False)
     if result.returncode != 0:
-        raise ValueError("Git operation failed")
+        raise ValueError(f"Git operation failed during {label}")
     return result
 
 
-def _remote_revision(remote: str, branch: str) -> str:
-    result = _run(["git", "ls-remote", "--heads", remote, f"refs/heads/{branch}"])
+def _caller_repository() -> Path:
+    result = _run(
+        ["git", "rev-parse", "--show-toplevel"],
+        label="caller repository discovery",
+    )
+    return Path(result.stdout.strip()).resolve()
+
+
+def _remote_revision(repository: Path, remote: str, branch: str) -> str:
+    result = _run(
+        ["git", "ls-remote", "--heads", remote, f"refs/heads/{branch}"],
+        cwd=repository,
+        label="remote revision lookup",
+    )
     line = result.stdout.strip()
     if not line:
         return ""
@@ -74,13 +88,13 @@ def _validate_candidate(args: argparse.Namespace, marketplace: Path) -> None:
         raise ValueError("candidate BUILD_INFO.json does not match publish arguments")
 
 
-def _existing_build_info(
+def _existing_snapshot(
     repository: Path,
     *,
     remote: str,
     branch: str,
     expected_revision: str,
-) -> dict[str, object] | None:
+) -> tuple[dict[str, object], str] | None:
     if not expected_revision:
         return None
     _run(
@@ -93,15 +107,29 @@ def _existing_build_info(
             f"refs/heads/{branch}",
         ],
         cwd=repository,
+        label="existing snapshot fetch",
     )
-    fetched = _run(["git", "rev-parse", "FETCH_HEAD"], cwd=repository).stdout.strip()
+    fetched = _run(
+        ["git", "rev-parse", "FETCH_HEAD"],
+        cwd=repository,
+        label="existing snapshot revision verification",
+    ).stdout.strip()
     if fetched != expected_revision:
         raise ValueError("Marketplace branch changed before validation")
-    raw = _run(["git", "show", f"FETCH_HEAD:{BUILD_INFO}"], cwd=repository).stdout
+    raw = _run(
+        ["git", "show", f"FETCH_HEAD:{BUILD_INFO}"],
+        cwd=repository,
+        label="existing snapshot metadata read",
+    ).stdout
     value = json.loads(raw)
     if not isinstance(value, dict):
         raise ValueError("existing BUILD_INFO.json must be an object")
-    return value
+    tree = _run(
+        ["git", "rev-parse", "FETCH_HEAD^{tree}"],
+        cwd=repository,
+        label="existing snapshot tree read",
+    ).stdout.strip()
+    return value, tree
 
 
 def publish(args: argparse.Namespace) -> dict[str, str | bool]:
@@ -110,7 +138,10 @@ def publish(args: argparse.Namespace) -> dict[str, str | bool]:
         raise ValueError("Marketplace directory does not exist")
     candidate_version = _version(args.version, args.channel)
     _validate_candidate(args, marketplace)
-    expected_old_revision = _remote_revision(args.remote, args.branch)
+    caller_repository = _caller_repository()
+    expected_old_revision = _remote_revision(
+        caller_repository, args.remote, args.branch
+    )
     if (
         args.expected_old_revision is not None
         and args.expected_old_revision != expected_old_revision
@@ -120,12 +151,20 @@ def publish(args: argparse.Namespace) -> dict[str, str | bool]:
     with tempfile.TemporaryDirectory() as directory:
         repository = Path(directory) / "snapshot"
         repository.mkdir()
-        _run(["git", "init", "--quiet"], cwd=repository)
-        existing = _existing_build_info(
-            repository,
+        _run(
+            ["git", "init", "--quiet"],
+            cwd=repository,
+            label="snapshot repository initialization",
+        )
+        existing_snapshot = _existing_snapshot(
+            caller_repository,
             remote=args.remote,
             branch=args.branch,
             expected_revision=expected_old_revision,
+        )
+        existing = existing_snapshot[0] if existing_snapshot is not None else None
+        existing_tree = (
+            existing_snapshot[1] if existing_snapshot is not None else None
         )
         same_version = False
         if existing is not None:
@@ -137,15 +176,20 @@ def publish(args: argparse.Namespace) -> dict[str, str | bool]:
                 raise ValueError("existing Marketplace contains a newer version")
             same_version = existing_version_key == candidate_version
         shutil.copytree(marketplace, repository, dirs_exist_ok=True)
-        _run(["git", "add", "--all"], cwd=repository)
+        _run(
+            ["git", "add", "--all"],
+            cwd=repository,
+            label="snapshot tree staging",
+        )
         if same_version:
             existing_source_revision = existing.get("source_revision")
             if existing_source_revision != args.source_revision:
                 raise ValueError("same version already points to a different source revision")
-            existing_tree = _run(
-                ["git", "rev-parse", "FETCH_HEAD^{tree}"], cwd=repository
+            candidate_tree = _run(
+                ["git", "write-tree"],
+                cwd=repository,
+                label="candidate snapshot tree write",
             ).stdout.strip()
-            candidate_tree = _run(["git", "write-tree"], cwd=repository).stdout.strip()
             if existing_tree != candidate_tree:
                 raise ValueError("same version already has different Marketplace content")
             return {
@@ -168,19 +212,40 @@ def publish(args: argparse.Namespace) -> dict[str, str | bool]:
                 f"release: publish marketplace snapshot {args.version}",
             ],
             cwd=repository,
+            label="snapshot commit creation",
         )
-        revision = _run(["git", "rev-parse", "HEAD"], cwd=repository).stdout.strip()
+        revision = _run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=repository,
+            label="snapshot commit verification",
+        ).stdout.strip()
+        _run(
+            ["git", "fetch", "--quiet", "--no-tags", str(repository), "HEAD"],
+            cwd=caller_repository,
+            label="snapshot import into caller repository",
+        )
+        imported_revision = _run(
+            ["git", "rev-parse", "FETCH_HEAD"],
+            cwd=caller_repository,
+            label="imported snapshot verification",
+        ).stdout.strip()
+        if imported_revision != revision:
+            raise ValueError("Imported Marketplace snapshot revision does not match candidate")
         _run(
             [
                 "git",
                 "push",
                 f"--force-with-lease=refs/heads/{args.branch}:{expected_old_revision}",
                 args.remote,
-                f"HEAD:refs/heads/{args.branch}",
+                f"{revision}:refs/heads/{args.branch}",
             ],
-            cwd=repository,
+            cwd=caller_repository,
+            label="Marketplace snapshot push",
         )
-        if _remote_revision(args.remote, args.branch) != revision:
+        if (
+            _remote_revision(caller_repository, args.remote, args.branch)
+            != revision
+        ):
             raise ValueError("Marketplace remote verification failed after publish")
 
     return {"ok": True, "action": "published", "snapshot_revision": revision}
