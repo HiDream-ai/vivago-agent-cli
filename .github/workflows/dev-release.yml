@@ -259,7 +259,7 @@ jobs:
     env:
       ARCHIVE: ${{ github.workspace }}/.ci-release/vivago-dev-marketplace.tar.gz
       MARKETPLACE: ${{ github.workspace }}/.ci-release/marketplace
-      MARKETPLACE_WORKTREE: ${{ github.workspace }}/.ci-dev-marketplace
+      RELEASE_JSON: ${{ github.workspace }}/.ci-release/existing-release.json
     steps:
       - name: Check out the exact release source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -282,7 +282,10 @@ jobs:
             --version "${DEV_VERSION}" \
             --source-revision "${GITHUB_SHA}"
 
-      - name: Reject an existing immutable release tag
+      - name: Validate fresh or resumable development release state
+        id: release_state
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           set +e
@@ -291,10 +294,26 @@ jobs:
           set -e
           case "${tag_lookup_status}" in
             0)
-              printf 'release tag already exists and will not be overwritten: v%s\n' "${DEV_VERSION}" >&2
-              exit 1
+              git fetch --no-tags origin "refs/tags/v${DEV_VERSION}"
+              tag_revision="$(git rev-list -n 1 FETCH_HEAD)"
+              gh release view "v${DEV_VERSION}" \
+                --repo "${GITHUB_REPOSITORY}" \
+                --json tagName,targetCommitish,isPrerelease,isDraft,assets \
+                > "${RELEASE_JSON}"
+              python scripts/validate_dev_release_state.py \
+                --version "${DEV_VERSION}" \
+                --source-revision "${GITHUB_SHA}" \
+                --archive "${ARCHIVE}" \
+                --tag-revision "${tag_revision}" \
+                --release-json "${RELEASE_JSON}"
+              printf 'create_release=false\n' >> "${GITHUB_OUTPUT}"
               ;;
             2)
+              python scripts/validate_dev_release_state.py \
+                --version "${DEV_VERSION}" \
+                --source-revision "${GITHUB_SHA}" \
+                --archive "${ARCHIVE}"
+              printf 'create_release=true\n' >> "${GITHUB_OUTPUT}"
               ;;
             *)
               printf 'unable to verify whether release tag exists\n' >&2
@@ -302,24 +321,8 @@ jobs:
               ;;
           esac
 
-      - name: Update dev Marketplace with a fast-forward commit
-        run: |
-          set -euo pipefail
-          git fetch origin dev-marketplace
-          git worktree add "${MARKETPLACE_WORKTREE}" origin/dev-marketplace
-          rsync -a --delete --exclude=.git "${MARKETPLACE}/" "${MARKETPLACE_WORKTREE}/"
-          git -C "${MARKETPLACE_WORKTREE}" add --all
-          if git -C "${MARKETPLACE_WORKTREE}" diff --cached --quiet; then
-            printf 'dev-marketplace already contains version %s\n' "${DEV_VERSION}"
-          else
-            git -C "${MARKETPLACE_WORKTREE}" \
-              -c "user.name=github-actions[bot]" \
-              -c "user.email=41898282+github-actions[bot]@users.noreply.github.com" \
-              commit -m "release: publish vivago-dev ${DEV_VERSION}"
-            git -C "${MARKETPLACE_WORKTREE}" push origin HEAD:dev-marketplace
-          fi
-
       - name: Create immutable GitHub Prerelease
+        if: steps.release_state.outputs.create_release == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -330,3 +333,14 @@ jobs:
             --title "VivagoAgent CLI ${DEV_VERSION}" \
             --notes "Development build from ${GITHUB_SHA}. Uses the overseas test environment only." \
             --prerelease
+
+      - name: Update dev Marketplace snapshot with an exact lease
+        run: |
+          set -euo pipefail
+          python scripts/publish_marketplace_snapshot.py \
+            --marketplace "${MARKETPLACE}" \
+            --remote "origin" \
+            --branch "dev-marketplace" \
+            --channel "dev" \
+            --version "${DEV_VERSION}" \
+            --source-revision "${GITHUB_SHA}"
