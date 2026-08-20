@@ -191,7 +191,7 @@ Pull Request、Push 或手动运行时执行：
 
 - 创建不可变 `v0.3.0-dev.N` Tag；
 - 创建 GitHub Prerelease；
-- 以普通快进提交更新 `dev-marketplace`；
+- 创建无父提交的当前版本快照，并以精确 `force-with-lease` 更新 `dev-marketplace`；
 - 分发只连接海外测试环境的插件。
 
 发布失败时不得部分覆盖 `dev-marketplace`，也不得移动已有 Tag。
@@ -227,7 +227,7 @@ Beta Check 不创建 Tag 或 Release，也不修改 `marketplace`。
    required reviewer，暂以公司仓库写权限和手动触发作为人工授权；仓库公开或套餐升级后启用
    至少一名 reviewer。
 9. 创建不可变 Tag 和 GitHub Prerelease。
-10. 使用普通快进提交更新 CI 生成的 `marketplace`。
+10. 创建无父提交的当前版本快照，并以精确 `force-with-lease` 更新 CI 生成的 `marketplace`。
 11. 上传 checksum、SBOM 和构建证明。
 
 Push 到公司仓库不会直接给外部用户发布。只有具备公司仓库写权限的人手动运行 `Publish Beta`、
@@ -477,8 +477,11 @@ v0.3.0-beta.2
 v0.3.0-beta.3
 ```
 
-出现问题时不移动旧 Tag，也不强推 Marketplace 历史。修复或回滚源码后发布更高版本，例如用
-`v0.3.0-beta.2` 替代有问题的 `beta.1`，然后把 `marketplace` 指向新版本。
+出现问题时不移动旧 Tag 或覆盖旧 Release，也不把 Marketplace 指回旧版本。安装分支是只保留
+当前版本的单提交快照，由发布机器人以精确 `force-with-lease` 受控更新。修复或回滚源码后仍发布
+更高版本，例如用 `v0.3.0-beta.2` 替代有问题的 `beta.1`，然后把 `marketplace` 更新为新快照。
+具体机制见
+[Marketplace 历史控制设计](2026-08-20-vivago-agent-cli-marketplace-history-bounding-design.md)。
 
 公开 Beta 面向所有现有 Vivago 用户，不能只依靠撤回 GitHub Release 止损。发布前需要确认
 VivagoAgent 或网关可以基于 `X-Client-Version` 阻断高风险 CLI 版本，并继续保留用户全局限流；

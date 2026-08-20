@@ -139,8 +139,11 @@ class GitHubWorkflowContractTests(unittest.TestCase):
         self.assertIn('--source-revision "${GITHUB_SHA}"', text)
         self.assertIn("gh release create", text)
         self.assertIn("--prerelease", text)
-        self.assertRegex(text, r"git[^\n]* push origin HEAD:dev-marketplace")
-        self.assertNotIn("--force", text)
+        self.assertIn("scripts/publish_marketplace_snapshot.py", text)
+        self.assertIn('--branch "dev-marketplace"', text)
+        self.assertIn('--channel "dev"', text)
+        self.assertNotRegex(text, r"git[^\n]* push origin HEAD:dev-marketplace")
+        self.assertNotIn("git worktree add", text)
         self.assertNotRegex(text, r"(?m)^      profile:\s*$")
 
         for command in (
@@ -192,14 +195,19 @@ class GitHubWorkflowContractTests(unittest.TestCase):
         )
         self.assertIn("host-lifecycle-${{ matrix.target }}-${{ matrix.host }}", text)
 
-    def test_dev_release_preserves_worktree_metadata_and_fails_closed_on_tag_lookup(self) -> None:
+    def test_dev_release_resumes_safely_and_publishes_snapshot_after_release(self) -> None:
         text = _workflow("dev-release.yml")
 
-        self.assertIn("rsync -a --delete --exclude=.git ", text)
-        self.assertNotIn("--exclude=.git/", text)
+        self.assertIn("scripts/validate_dev_release_state.py", text)
+        self.assertIn("gh release view", text)
+        self.assertIn("steps.release_state.outputs.create_release == 'true'", text)
         self.assertIn("tag_lookup_status=$?", text)
         self.assertIn("case \"${tag_lookup_status}\" in", text)
         self.assertRegex(text, r"(?s)case \"\$\{tag_lookup_status\}\" in.*0\).*2\).*\*\)")
+        self.assertLess(
+            text.index("gh release create"),
+            text.index("scripts/publish_marketplace_snapshot.py"),
+        )
 
     def test_hosted_l3_is_manual_ticket_only_and_covers_six_native_targets(self) -> None:
         text = _workflow("hosted-l3.yml")
@@ -388,8 +396,11 @@ class GitHubWorkflowContractTests(unittest.TestCase):
         self.assertRegex(text, r"(?m)^    permissions:\n      contents: write\s*$")
         self.assertIn("gh release create", text)
         self.assertIn("--prerelease", text)
-        self.assertRegex(text, r"git[^\n]* push origin HEAD:marketplace")
-        self.assertNotIn("--force", text)
+        self.assertIn("scripts/publish_marketplace_snapshot.py", text)
+        self.assertIn('--branch "marketplace"', text)
+        self.assertIn('--channel "beta"', text)
+        self.assertNotRegex(text, r"git[^\n]* push origin HEAD:marketplace")
+        self.assertNotIn("git worktree add", text)
         self.assertIn("tag_lookup_status=$?", text)
         self.assertIn("case \"${tag_lookup_status}\" in", text)
         self.assertIn("cancel-in-progress: false", text)
@@ -424,11 +435,18 @@ class GitHubWorkflowContractTests(unittest.TestCase):
         text = _workflow("beta-release.yml")
 
         self.assertIn("scripts/validate_beta_release_state.py", text)
-        self.assertIn("scripts/validate_beta_marketplace_update.py", text)
+        self.assertIn("scripts/publish_marketplace_snapshot.py", text)
         self.assertIn("gh release view", text)
         self.assertIn("steps.release_state.outputs.create_release == 'true'", text)
-        self.assertIn("refs/heads/marketplace", text)
-        self.assertIn("checkout --orphan marketplace", text)
+        self.assertIn('--branch "marketplace"', text)
+        self.assertIn('--channel "beta"', text)
+        self.assertLess(
+            text.index("gh release create"),
+            text.index("scripts/publish_marketplace_snapshot.py"),
+        )
+        self.assertNotIn("scripts/validate_beta_marketplace_update.py", text)
+        self.assertNotIn("checkout --orphan marketplace", text)
+        self.assertNotIn("MARKETPLACE_WORKTREE", text)
         self.assertNotIn("Reject an existing immutable release tag", text)
         self.assertNotIn("release tag already exists and will not be overwritten", text)
 

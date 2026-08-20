@@ -494,12 +494,14 @@ claude plugin install vivago-agent-cli@vivago
 8. 校验 Codex、Claude Code Manifest。
 9. 使用内部正式账号完成海外正式环境的受控冒烟。
 10. 创建不可覆盖的 GitHub prerelease。
-11. 由发布机器人更新公司仓库 `marketplace` 分支中的完整插件包和版本。
+11. 由发布机器人创建无父提交的完整插件快照，并以精确 `force-with-lease` 更新公司仓库
+    `marketplace` 分支，使安装分支的可达历史不随版本数增长。
 
 公司 `marketplace` 分支不能接收个人 GitHub、开发机或其他流水线直接上传的二进制。Tag 和 Release 不允许覆盖，GitHub Actions 使用固定版本或 commit SHA。个人 GitHub 的测试结果可以作为评审证据，但公司 CI 必须独立重跑发布门禁。
 
-事故恢复不把 `marketplace` 强推回旧提交。发布系统从已验证的安全源码重新构建更高版本，例如用
-`beta.2` 替代有问题的 `beta.1`，再以普通快进提交更新安装通道。首个 Beta 发布前使用公司私有仓库
+事故恢复不把 `marketplace` 指回旧版本。安装分支作为当前版本快照由发布机器人受控改写，但
+发布系统仍从已验证的安全源码重新构建更高版本，例如用 `beta.2` 替代有问题的 `beta.1`，再更新
+安装通道。Tag 和 Release 保持不可变。首个 Beta 发布前使用公司私有仓库
 的临时 `drill/*` 分支验证这套机制；演练不创建 Tag、Release 或正式 `marketplace`，完成后删除临时
 分支。CLI 版本阻断由 VivagoAgent 负责：海外环境通过 `VIVAGO_CLI_BLOCKED_VERSIONS` 配置完整
 版本号 denylist，只对 `source=cli` 且版本精确命中的请求返回 HTTP 426 和
@@ -508,6 +510,9 @@ claude plugin install vivago-agent-cli@vivago
 公开 Beta 暂不把 Apple 公证和 Windows 签名作为发布阻断项，但必须提供 checksum、SBOM、构建来源证明和受保护 Tag。后续扩大到大量普通用户或企业用户前，再补 macOS Developer ID/Notarization 和 Windows Authenticode。
 
 插件不实现自更新，统一使用 Codex/Claude Code Marketplace 更新能力。登录凭证存放在用户凭证库中，插件升级、卸载或回滚不得覆盖或删除凭证。
+
+安装分支的历史控制、并发租约和双宿主升级验证见
+[Marketplace 历史控制设计](2026-08-20-vivago-agent-cli-marketplace-history-bounding-design.md)。
 
 公开仓库增加 Apache-2.0 `LICENSE`、第三方依赖 `NOTICE`、`SECURITY.md`、安装文档和漏洞报告入口。
 

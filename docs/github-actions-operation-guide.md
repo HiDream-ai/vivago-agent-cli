@@ -92,9 +92,9 @@ gh workflow run dev-release.yml \
         ↓
 六平台 × Codex/Claude Code，共 12 个插件生命周期 Job
         ↓
-全量通过后更新 dev-marketplace
+创建或验证不可变 GitHub Prerelease
         ↓
-创建不可覆盖的 GitHub Prerelease
+用精确租约更新无父提交的 dev-marketplace 快照
 ```
 
 12 个插件生命周期 Job 分别验证全新安装、升级、回滚和再次升级。任一平台或宿主失败，发布 Job 都不会执行。
@@ -103,7 +103,8 @@ gh workflow run dev-release.yml \
 
 - 输入 `0.3.0-dev.6`，不要输入 `v0.3.0-dev.6`；
 - 每次使用新的版本号；
-- 已经存在的 Git Tag 或 Prerelease 不允许覆盖；
+- 已经存在的 Git Tag 或 Prerelease 不允许覆盖；只有版本、源码 SHA 和资产摘要完全一致时，才允许
+  从 Marketplace 步骤继续恢复；
 - 当前个人仓库只发布 `vivago-dev`，固定使用海外测试环境，不能通过参数切换到 `prod`。
 
 发布成功后检查：
@@ -111,7 +112,16 @@ gh workflow run dev-release.yml \
 1. Actions 页面所有 Build、12 个 Host lifecycle 和 Publish Job 都是绿色；
 2. GitHub **Releases** 中出现对应的 `v0.3.0-dev.N` Prerelease；
 3. `dev-marketplace` 分支的插件版本和源码 SHA 已更新；
-4. 用 Codex 或 Claude Code 刷新 Marketplace 后能安装或升级到该版本。
+4. `dev-marketplace` 的 HEAD 没有父提交，安装分支只保留当前版本快照；
+5. 用 Codex 或 Claude Code 刷新 Marketplace 后能安装或升级到该版本。
+
+公司 `Publish Beta` 使用同一个快照脚本，但固定为 `channel=beta`、`branch=marketplace`，并从公司
+`main` 使用 `prod` profile 重新构建。个人开发包和二进制不能直接进入公司安装通道。公司发布前还
+需要确认仓库规则允许 GitHub Actions 对 `marketplace` 使用受控强推，同时继续禁止人员直接强推
+`main`、Tag 和安装分支。
+
+2026-08-20 的只读检查显示公司仓库尚未配置 ruleset，`marketplace` 也未启用分支保护。公司管理员
+完成规则配置前，只能评审和运行不发布的 Beta Check，不能运行接入快照逻辑后的 `Publish Beta`。
 
 ## 手动跑真实接口 L3
 
@@ -166,8 +176,9 @@ gh workflow run hosted-l3.yml \
 | 自动 CI 的测试、构建或扫描 | 不发布 | 修复源码后重新 Push |
 | 六平台原生冒烟 | 不发布 | 打开失败平台的 Job，检查 Runner、launcher 和二进制输出 |
 | 12 个插件生命周期 Job | 不发布 | 根据失败的目标平台和宿主检查安装、升级或回滚阶段 |
-| 版本号已经存在 | 不发布且不覆盖旧版本 | 更正代码后使用新的开发版本号，不删除或覆盖旧 Tag |
-| `dev-marketplace` 在发布期间变化 | 推送失败，不强推 | 确认远端状态后重新运行发布 |
+| 版本号已存在且源码或资产不同 | 不发布且不覆盖旧版本 | 使用新的开发版本号，不删除或覆盖旧 Tag |
+| 版本号、源码和资产完全一致 | 允许恢复未完成的 Marketplace 步骤 | 保持同一源码重跑；若源码已经变化，必须改用新版本 |
+| `dev-marketplace` 在发布期间变化 | 精确租约不匹配，快照更新失败 | 确认远端版本和 SHA 后重新运行发布，禁止无租约强推 |
 | Hosted L3 的在线接口失败 | 已发布版本不会自动回滚 | 保留脱敏报告，按平台、阶段和请求 ID 排查；必要时停止推广该版本 |
 
 个人 GitHub 的发布流程不会生成正式环境版本。迁移到公司 GitHub 时可以复用测试、六平台构建和插件校验，但公开 Beta 必须使用独立且固定为 `prod` 的发布 Workflow、公司审批和受保护的 Tag，不能复用个人 GitHub 生成的开发二进制。

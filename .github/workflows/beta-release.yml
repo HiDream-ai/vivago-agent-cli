@@ -364,7 +364,6 @@ jobs:
     env:
       ARCHIVE: ${{ github.workspace }}/.ci-beta-release/vivago-beta-marketplace.tar.gz
       MARKETPLACE: ${{ github.workspace }}/.ci-beta-release/marketplace
-      MARKETPLACE_WORKTREE: ${{ github.workspace }}/.ci-marketplace
       RELEASE_JSON: ${{ github.workspace }}/.ci-beta-release/existing-release.json
     steps:
       - name: Check out exact release source
@@ -463,43 +462,13 @@ jobs:
             --notes "Public Beta built from reviewed company source ${GITHUB_SHA}. Uses the overseas production environment only." \
             --prerelease
 
-      - name: Update production Marketplace with a fast-forward commit
+      - name: Update production Marketplace snapshot with an exact lease
         run: |
           set -euo pipefail
-          set +e
-          git ls-remote --exit-code --heads origin refs/heads/marketplace >/dev/null 2>&1
-          marketplace_lookup_status=$?
-          set -e
-          case "${marketplace_lookup_status}" in
-            0)
-              git fetch origin refs/heads/marketplace:refs/remotes/origin/marketplace
-              git worktree add --detach "${MARKETPLACE_WORKTREE}" origin/marketplace
-              python scripts/validate_beta_marketplace_update.py \
-                --candidate-version "${BETA_VERSION}" \
-                --candidate-revision "${GITHUB_SHA}" \
-                --existing-build-info \
-                  "${MARKETPLACE_WORKTREE}/plugins/vivago-agent-cli/BUILD_INFO.json"
-              ;;
-            2)
-              git worktree add --detach "${MARKETPLACE_WORKTREE}" "${GITHUB_SHA}"
-              git -C "${MARKETPLACE_WORKTREE}" checkout --orphan marketplace
-              python scripts/validate_beta_marketplace_update.py \
-                --candidate-version "${BETA_VERSION}" \
-                --candidate-revision "${GITHUB_SHA}"
-              ;;
-            *)
-              printf 'unable to verify whether marketplace branch exists\n' >&2
-              exit "${marketplace_lookup_status}"
-              ;;
-          esac
-          rsync -a --delete --exclude=.git "${MARKETPLACE}/" "${MARKETPLACE_WORKTREE}/"
-          git -C "${MARKETPLACE_WORKTREE}" add --all
-          if git -C "${MARKETPLACE_WORKTREE}" diff --cached --quiet; then
-            printf 'marketplace already contains version %s\n' "${BETA_VERSION}"
-          else
-            git -C "${MARKETPLACE_WORKTREE}" \
-              -c "user.name=github-actions[bot]" \
-              -c "user.email=41898282+github-actions[bot]@users.noreply.github.com" \
-              commit -m "release: publish vivago ${BETA_VERSION}"
-            git -C "${MARKETPLACE_WORKTREE}" push origin HEAD:marketplace
-          fi
+          python scripts/publish_marketplace_snapshot.py \
+            --marketplace "${MARKETPLACE}" \
+            --remote "origin" \
+            --branch "marketplace" \
+            --channel "beta" \
+            --version "${BETA_VERSION}" \
+            --source-revision "${GITHUB_SHA}"
