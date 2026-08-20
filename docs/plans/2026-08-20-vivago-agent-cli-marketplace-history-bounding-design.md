@@ -3,7 +3,7 @@
 ## 状态
 
 - 日期：2026-08-20
-- 状态：个人 Dev 通道已实测通过；公司 Beta 代码已进入 `main`，现有仓库权限满足公开发布要求
+- 状态：个人 Dev 和公司 Beta 通道均已通过连续发布实测，公开 Beta `0.3.0-beta.2` 已验证历史稳定
 - 适用通道：个人 GitHub `dev-marketplace`、公司 GitHub `marketplace`
 
 ## 背景
@@ -125,13 +125,35 @@ main source SHA
 | `dev.10` 完整发布 | GitHub Actions 全绿，六平台 × 两宿主为 12/12 |
 | `dev.10` 安装分支 | `parent_count=0`，`BUILD_INFO.json` 指向发布源码和 `channel=dev` |
 | 上一版证据 | `dev.9` Prerelease 和资产仍可读取，没有被覆盖 |
-| 公司 Beta | 工作流已改用共享脚本；没有触发新的生产 Beta |
+| 公司 Beta | `0.3.0-beta.2` 已发布；六平台 6/6、双宿主 12/12、Release 和两份证明全部通过 |
 
 `dev.9` 的第一次发布在 Marketplace 推送阶段失败，原因是临时仓库没有调用仓库的 Git remote 和
 Actions 认证配置。修复后，快照仍在临时仓库创建，但从已认证的调用仓库执行精确 SHA 推送。
 尝试用新源码重跑同一个 `dev.9` 时，Release 恢复校验又因源码 SHA 不一致主动拒绝；该保护保留，
 没有通过放宽不可变规则绕过。最终使用 `dev.9` 原始 Release 包补齐安装分支，再由 `dev.10` 验证
 完整自动发布。
+
+### 2026-08-20 公司通道实测
+
+公司 [Publish Beta #32355244306](https://github.com/HiDream-ai/vivago-agent-cli/actions/runs/32355244306)
+从 `e72293750560af88582feb568346a6efc029341f` 发布 `0.3.0-beta.2`。这是快照机制进入公司通道后的
+第二个公开 Beta，验证结果如下：
+
+| 检查项 | `beta.1` 基线 | `beta.2` 结果 |
+|---|---:|---:|
+| 可达提交 | 1 | 1 |
+| HEAD 父提交 | 0 | 0 |
+| 可达 Blob | 33 | 33 |
+| 可达 Blob 字节 | 42,418,915 | 42,418,915 |
+| 版本档案 | 不可变 Release | 新建不可变 Release，旧版仍保留 |
+
+`beta.2` 的 `marketplace` HEAD 为 `fc636c31cb5f79fe203d72fd716a5471818a6677`，
+`BUILD_INFO.json` 为 `version=0.3.0-beta.2`、`channel=beta`、`profile=prod`，源码 SHA 与 Tag、
+Release 完全一致。第二次发布后的增长为 0 字节，证明安装分支不会再按每个版本约 40 MB 线性增长。
+
+发布包内 29 项 SHA-256 摘要全部通过。SLSA provenance 和 SPDX 2.3 SBOM 两份 GitHub 构建证明
+均按公司仓库、发布 Workflow、`refs/heads/main` 和准确源码 SHA 验证通过。本机隔离 Codex 又使用
+真实 `beta.1`、`beta.2` Release 包完成安装、升级、回滚、再升级，未修改日常 Codex 配置。
 
 ## 权限和上线
 
@@ -157,5 +179,5 @@ Actions 认证配置。修复后，快照仍在临时仓库创建，但从已认
 - README 安装和升级命令不变；
 - 设计、发布文档和历史决策记录保持一致。
 
-上述完成标准中的代码、个人通道和本地回归已经完成。下一次 Beta 实际发布仍是独立上线验证，不能用
-个人仓库结果代替。
+上述完成标准已全部满足。后续每次 `beta.N` 仍要保留单提交、无父提交、体积不超过单快照 110% 的
+发布后检查；公司 `beta.2` 的实际结果不能替代未来版本自身的核验。
