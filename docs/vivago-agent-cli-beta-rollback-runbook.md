@@ -2,7 +2,7 @@
 
 ## 适用范围
 
-本手册用于公司 GitHub 私有仓库中的内部回滚演练，以及公开 Beta 发布后的真实恢复操作。
+本手册用于公司 GitHub 仓库中的内部回滚演练，以及公开 Beta 发布后的真实恢复操作。
 内部演练只使用 `drill/marketplace-*` 临时分支，不创建正式 Tag、Release 或 `marketplace`。
 
 真实事故恢复遵循同一原则：已经发布的 Tag 和 Release 不覆盖，不把 Marketplace 指回旧问题版本；
@@ -10,10 +10,9 @@
 发布机器人使用精确 `force-with-lease` 受控更新，以避免累积多平台二进制历史。
 
 内部 `Beta Rollback Drill` 仍使用临时分支上的普通快进提交，用来证明安全源码能在 30 分钟内构建
-更高版本并完成恢复；它不会验证正式 `marketplace` 的快照强推权限。正式通道首次使用无父快照前，
-仓库管理员还需确认 GitHub Actions 可以受控改写 `marketplace`，同时人员不能直接强推该分支。
-2026-08-20 的只读检查结果为 ruleset 为空、`marketplace` 未保护，因此当前只允许继续代码评审和
-Beta Check，不允许用新快照逻辑发布下一版 Beta。
+更高版本并完成恢复；它不会修改正式 `marketplace`。公司仓库为 Public，外部普通用户没有写权限，
+不能更新或强推安装分支。公司研发继续沿用现有 Write/Admin 权限，发布 Workflow 使用精确
+`force-with-lease` 防止并发和过期任务误覆盖。
 
 ## 演练前检查
 
