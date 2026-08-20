@@ -3,7 +3,7 @@
 ## 状态
 
 - 日期：2026-08-20
-- 状态：个人 Dev 通道已实测通过；公司 Beta 工作流代码已接入，仓库规则未满足上线要求
+- 状态：个人 Dev 通道已实测通过；公司 Beta 代码已进入 `main`，现有仓库权限满足公开发布要求
 - 适用通道：个人 GitHub `dev-marketplace`、公司 GitHub `marketplace`
 
 ## 背景
@@ -135,13 +135,18 @@ Actions 认证配置。修复后，快照仍在临时仓库创建，但从已认
 
 ## 权限和上线
 
-- GitHub Actions 只能改写对应的安装分支，不能改写 `main`、Tag 或 Release；
-- 公司仓库规则必须允许发布 Workflow 对 `marketplace` 使用受控强推，其他人员仍禁止直接推送；
-- 若仓库规则无法限定 GitHub Actions 绕过者，发布先保持原方式，不降低整个仓库的保护等级；
-- 个人通道验证和双宿主生命周期测试已经通过，公司 Beta 流水线已改用同一共享脚本；
-- 2026-08-20 只读检查显示公司仓库没有 ruleset，`marketplace` 也没有分支保护；当前不能启用新的
-  Beta 快照发布，需由仓库管理员先配置受控强推和人员写入限制；
-- 该机制应在下一次 Dev/Beta 发布前完成，避免产生第二套可达二进制历史。
+- 公司仓库保持 Public。未被授予仓库 Write/Admin 权限的外部用户只能读取、下载和 Fork，不能向
+  `main`、Tag 或 `marketplace` 推送，更不能强推；
+- 2026-08-20 通过 GitHub API 复核，公司仓库拥有写权限的 outside collaborator 数量为 `0`；
+- Fork 中运行的 Workflow 不能获得公司仓库的 `GITHUB_TOKEN` 写权限或 `production-beta` Secret，
+  因此不能借助 Fork 发布官方版本；
+- 公司研发拥有仓库写权限，可以按 GitHub 原有权限更新 `marketplace`。这是当前明确接受的运维范围，
+  不额外引入 Deploy Key、机器人账号或人员强推限制；
+- `Publish Beta` 继续使用 Job 级 `contents: write` 的 `GITHUB_TOKEN` 创建 Tag、Release、证明材料并
+  通过精确 `force-with-lease` 更新 `marketplace`；
+- 精确租约用于阻止并发任务或过期任务误覆盖，不用于防御已经拥有公司仓库写权限的人员；
+- 如果以后需要把公司研发也限制为只读安装分支，再单独引入 Ruleset 和公司 GitHub App 或专用发布
+  身份，不把这项治理升级作为当前 Beta 的阻断项。
 
 ## 可量化完成标准
 
@@ -152,5 +157,5 @@ Actions 认证配置。修复后，快照仍在临时仓库创建，但从已认
 - README 安装和升级命令不变；
 - 设计、发布文档和历史决策记录保持一致。
 
-上述完成标准中的代码、个人通道和本地回归可以在本分支完成；公司规则和下一次 Beta 实际发布是
-独立上线门禁，不能用个人仓库结果代替。
+上述完成标准中的代码、个人通道和本地回归已经完成。下一次 Beta 实际发布仍是独立上线验证，不能用
+个人仓库结果代替。

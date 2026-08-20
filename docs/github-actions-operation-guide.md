@@ -116,12 +116,13 @@ gh workflow run dev-release.yml \
 5. 用 Codex 或 Claude Code 刷新 Marketplace 后能安装或升级到该版本。
 
 公司 `Publish Beta` 使用同一个快照脚本，但固定为 `channel=beta`、`branch=marketplace`，并从公司
-`main` 使用 `prod` profile 重新构建。个人开发包和二进制不能直接进入公司安装通道。公司发布前还
-需要确认仓库规则允许 GitHub Actions 对 `marketplace` 使用受控强推，同时继续禁止人员直接强推
-`main`、Tag 和安装分支。
+`main` 使用 `prod` profile 重新构建。个人开发包和二进制不能直接进入公司安装通道。公司仓库为
+Public，外部普通用户没有写权限，不能更新或强推 `marketplace`；Fork 也拿不到公司 Workflow 的
+写权限和 Environment Secret。公司研发保留现有 Write/Admin 权限，可以更新安装分支。
 
-2026-08-20 的只读检查显示公司仓库尚未配置 ruleset，`marketplace` 也未启用分支保护。公司管理员
-完成规则配置前，只能评审和运行不发布的 Beta Check，不能运行接入快照逻辑后的 `Publish Beta`。
+`Publish Beta` 使用 Job 级 `contents: write` 的 `GITHUB_TOKEN` 和精确 `force-with-lease` 更新快照。
+精确租约防止并发任务和过期任务误覆盖，但不限制已经拥有公司仓库写权限的研发。如果以后要增加
+人员写入限制，应单独设计 Ruleset 和专用发布身份，不作为当前 Beta 的发布前置。
 
 ## 手动跑真实接口 L3
 
