@@ -6,11 +6,11 @@
 | --- | --- |
 | 长期源码分支 | `main` |
 | 开发版本 | `0.3.0-dev.10` |
-| 首个生产候选 | `0.3.0-beta.1` |
+| 当前公开 Beta | `0.3.0-beta.2` |
 | 环境 | 海外测试（`profile=dev`）和海外生产（`profile=prod`） |
 | 公司源码仓库是否公开 | **是**（`HiDream-ai/vivago-agent-cli`） |
-| Beta Release 是否已经公开发布 | **是**（`v0.3.0-beta.1`） |
-| 当前进行到 | **首个公开 Beta 观察中；安装分支历史控制已通过个人通道实测，等待公司代码和权限门禁** |
+| Beta Release 是否已经公开发布 | **是**（`v0.3.0-beta.2`） |
+| 当前进行到 | **第二个公开 Beta 已发布；公司安装分支历史控制和生产附件/产物均已实测通过** |
 
 ### 2026-08-20 Marketplace 历史控制
 
@@ -31,10 +31,30 @@ Actions 认证；修复后改为从已认证的调用仓库推送快照 SHA。�
 `dev.9`，被不可变 Release 的源码 SHA 校验拒绝，这是预期保护。随后使用摘要匹配的 `dev.9`
 原始 Release 包补齐安装分支，再由 `dev.10` 完成完整自动化验证。
 
-公司 `.github/workflows/beta-release.yml` 已改用同一快照脚本，旧 worktree 快进发布已移除。本次没有
-触发新的生产 Beta。历史控制 PR 已进入公司 `main`，并同步到个人 GitHub 和 Codeup。当前权限要求为
-外部普通用户不能写入公司仓库，公司研发可以更新安装分支；Public 仓库默认权限已经满足该要求，
-不再增加 Deploy Key 或 Ruleset。下一步直接通过下一次正式发布验证公司快照通道。
+公司 `.github/workflows/beta-release.yml` 已改用同一快照脚本，旧 worktree 快进发布已移除。历史控制
+PR 已进入公司 `main`，并同步到个人 GitHub 和 Codeup。当前权限要求为外部普通用户不能写入公司
+仓库，公司研发可以更新安装分支；Public 仓库默认权限已经满足该要求，不再增加 Deploy Key 或
+Ruleset。
+
+`v0.3.0-beta.2` 已在公司仓库完成第二次正式发布：
+
+- [Publish Beta #32355244306](https://github.com/HiDream-ai/vivago-agent-cli/actions/runs/32355244306)
+  从准确源码 `e72293750560af88582feb568346a6efc029341f` 重建生产包并全绿；
+- 六个平台原生启动为 6/6，Codex/Claude Code 安装、升级、回滚、再升级为 12/12；
+- [v0.3.0-beta.2 Prerelease](https://github.com/HiDream-ai/vivago-agent-cli/releases/tag/v0.3.0-beta.2)
+  包含 Marketplace、SHA256SUMS 和 SPDX SBOM，SLSA provenance 与 SPDX 2.3 两份证明均按发布
+  Workflow、`main` 和准确源码 SHA 验证通过；
+- `marketplace` 更新后仍只有 1 个无父提交、33 个 Blob、42,418,915 字节，与 `beta.1` 基线完全
+  相同。第二次发布没有把安装分支增加到约 84 MB；
+- 本机临时 `CODEX_HOME` 使用真实 `beta.1` 和 `beta.2` Release 包完成安装、升级、回滚、再升级，
+  四个阶段的 `doctor_exit` 均为 0。
+
+生产附件冒烟第一次运行在业务请求前失败，原因是 `production-beta` Environment 尚未写入短效
+`VIVAGO_E2E_TICKET`，不是 CLI 或生产 API 失败。本机生产 ticket 正常刷新后，使用仓库辅助命令
+只上传 access ticket，不上传 refresh token。第二次运行
+[Production Attachment Smoke #32356466206](https://github.com/HiDream-ai/vivago-agent-cli/actions/runs/32356466206)
+通过附件识别、SSE 图片生成和产物 preview/download。Runner 凭证及 GitHub Environment Secret
+均已清除，脱敏报告只保留 PASS、版本、源码、平台、宿主、类型和字节数。
 
 ### 2026-08-18 最新状态
 
@@ -58,7 +78,7 @@ CLI 修复已提交到个人 GitHub `main`（`5f75b14`），并随提交 `15f6fc
 
 ## 现在到哪一步了
 
-公开 Beta 五步均已完成，现在进入生产观察期；首个版本为 `v0.3.0-beta.1`。
+公开 Beta 五步均已完成，现在进入生产观察期；当前版本为 `v0.3.0-beta.2`。
 
 | 步骤 | 要完成的事情 | 当前状态 | 已有证据 | 还差什么 |
 | ---: | --- | --- | --- | --- |
@@ -66,7 +86,7 @@ CLI 修复已提交到个人 GitHub `main`（`5f75b14`），并随提交 `15f6fc
 | 2 | 用生产候选完成代表平台验收 | **已完成** | macOS ARM64/Codex 已通过生产登录、刷新、退出重登、任务、SSE、附件、产物和 Web 可见性 | 生产六平台真人登录和 Claude Code 模型调用不在本轮范围 |
 | 3 | 验证出问题后能否安全恢复并停止继续发布 | **已完成** | 公司 Beta Check 全绿；真实临时分支演练用 170 秒完成普通快进恢复并自动清理；VivagoAgent MR #356 已合并；海外测试命中 HTTP 426 后已恢复 | 生产发布前继续保持阻断配置为空 |
 | 4 | 完成公开仓库、法务和发布治理确认 | **已完成** | Apache 2.0、README、SECURITY、NOTICE、第三方许可证、CODEOWNERS 和治理测试 8/8 通过；公司仓库已公开 | 发布前确认生产 Loki selector 和发布人 |
-| 5 | 发布 `v0.3.0-beta.1` 并观察生产指标 | **已完成，进入观察期** | [Publish Beta #1](https://github.com/HiDream-ai/vivago-agent-cli/releases/tag/v0.3.0-beta.1) 全绿；六平台、12 组宿主、SBOM、attestation 和 `marketplace` 更新均完成 | 持续观察生产错误率、登录和任务指标 |
+| 5 | 发布公开 Beta 并观察生产指标 | **已完成，进入观察期** | `beta.1`、`beta.2` 均已发布；`beta.2` 六平台 6/6、双宿主 12/12、两份 attestation、单提交 `marketplace` 和生产附件/产物均通过 | 持续观察生产错误率、登录和任务指标 |
 
 ### 第 3 步目前做到哪里
 
@@ -114,16 +134,17 @@ CLI 修复已提交到个人 GitHub `main`（`5f75b14`），并随提交 `15f6fc
 | 1 | 个人通道连续快照和双宿主验证 | **已完成**；dev.10 运行 12/12 通过，安装分支为单提交 | 无 |
 | 2 | 将历史控制改动通过 PR 和 Beta Check 进入公司 `main` | **已完成**；公司、个人和 Codeup 的 `main` 均为 `065cf5f` | 无 |
 | 3 | 确认公开仓库外部用户权限 | **已完成**；GitHub API 显示可写 outside collaborator 为 0，研发保留 Write/Admin | 无 |
-| 4 | 下一次 Beta 发布验证公司快照分支并继续生产观察 | 公司发布人 | 使用新的 `beta.N`；检查 Release、attestation、单提交快照和生产指标 |
+| 4 | 公司 `beta.2` 快照发布与生产代表性冒烟 | **已完成**；安装分支体积与 `beta.1` 一致，生产附件/产物通过 | 无 |
+| 5 | 继续公开 Beta 观察，按需发布更高 `beta.N` | 公司发布人 | 只在有用户可见改动或修复时发布；继续核对 Release、attestation、单提交快照和生产指标 |
 
 ## 已经验证了哪些能力（L0–L3）
 
 | 层级 | 主要验证什么 | 当前结果 | 状态 | 关键证据 | 还缺什么 |
 | --- | --- | ---: | --- | --- | --- |
-| L0 | 六平台交叉编译、Marketplace 组装、checksum、环境地址扫描和静态门禁 | 6/6 | 已通过 | [Development Release #32349867792](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/32349867792)、[v0.3.0-dev.10](https://github.com/ChaoXia-Beginer/vivago-agent-cli/releases/tag/v0.3.0-dev.10) | 代码签名和公证不属于首个 Beta 阻断项 |
+| L0 | 六平台交叉编译、Marketplace 组装、checksum、环境地址扫描和静态门禁 | 6/6 | 已通过 | [Publish Beta #32355244306](https://github.com/HiDream-ai/vivago-agent-cli/actions/runs/32355244306)、[v0.3.0-beta.2](https://github.com/HiDream-ai/vivago-agent-cli/releases/tag/v0.3.0-beta.2) | 代码签名和公证不属于公开 Beta 阻断项 |
 | L1 | 在真实 OS/CPU Runner 上启动对应二进制，验证 launcher、`version` 和 `doctor` | 6/6 | 已通过 | dev.10 发布门禁的六平台原生报告 | 六个平台均为真实目标 Runner，不使用兼容层代替 |
-| L2 | Codex/Claude Code 插件安装、发现、升级、回滚、再升级 | 12/12 | 已通过 | [Development Release #32349867792](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/32349867792)，12 份脱敏报告 | 宿主模型主动选择 Skill 另行验证；本轮仅验证 Codex |
-| L3 | 通过安装后的插件 CLI 调用真实 VivagoAgent Web API，验证任务、SSE、附件和产物 | Dev 12/12；Prod 1/1 | 代表范围已通过 | [Dev Hosted L3 #31232383974](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/31232383974)；[Production Attachment Smoke #32024362266](https://github.com/HiDream-ai/vivago-agent-cli/actions/runs/32024362266) | 生产只验证 macOS ARM64/Codex；Claude Code 模型调用本轮不验 |
+| L2 | Codex/Claude Code 插件安装、发现、升级、回滚、再升级 | 12/12 | 已通过 | `beta.2` 发布运行的 12 个真实 Runner Job；本机另用真实 `beta.1`/`beta.2` 完成 Codex 四阶段验证 | 宿主模型主动选择 Skill 另行验证；本轮生产代表性调用只验证 Codex |
+| L3 | 通过安装后的插件 CLI 调用真实 VivagoAgent Web API，验证任务、SSE、附件和产物 | Dev 12/12；Prod 1/1 | 代表范围已通过 | [Dev Hosted L3 #31232383974](https://github.com/ChaoXia-Beginer/vivago-agent-cli/actions/runs/31232383974)；[beta.2 Production Smoke #32356466206](https://github.com/HiDream-ai/vivago-agent-cli/actions/runs/32356466206) | 生产只验证 macOS ARM64/Codex；Claude Code 模型调用本轮不验 |
 
 这里的计数口径不同：L0/L1 按六个平台计数，L2/L3 按“六个平台 × 两个宿主”计数。
 
@@ -421,18 +442,15 @@ L2 不调用 Codex 或 Claude 模型。它证明的是官方插件命令能安�
 | P0 | 宿主模型主动选择 Skill | Codex PASS；Claude Code 本轮移除 | Claude 后续如恢复范围约 0.25 天 | 可用宿主账号 | 自然语言触发、模型主动加载 Skill，不手工执行 launcher | 本轮不需要 |
 | P0 | `source/platform` 数据库持久化 | 服务端研发确认完成；日志与 Web 证据已具备，未直接查测试库字段 | 只读补证约 0.25 天，可后置 | 海外测试 Mongo 只读目标 | 精确核对三类对象的 `source=cli` | 需要协调只读权限时再介入 |
 | P0 | Web 页面可见性 | PASS | 已完成 | 海外测试 Web 登录 | CLI 项目、请求和回复可在 Web 打开 | 无 |
-| P1 | 公司 GitHub Beta 流水线 | **已完成**；[#32092763621](https://github.com/HiDream-ai/vivago-agent-cli/actions/runs/32092763621) 在 `41af5bd` 全绿 | 已完成 | 回滚演练提交进入公司 `main` | prod profile、checksum、SBOM、attestation、六平台和双宿主门禁全部通过 | 发布时需要最终确认 |
+| P1 | 公司 GitHub Beta 流水线 | **已完成**；`beta.2` 发布运行 `32355244306` 全绿 | 已完成 | 历史控制提交进入公司 `main` | prod profile、checksum、SBOM、两份 attestation、六平台 6/6 和双宿主 12/12 全部通过 | 无 |
 | P1 | `production-beta` 发布边界 | Environment 与 main 限制已完成；reviewer 受 GitHub 套餐限制 | 仓库公开或套餐升级后约 0.25 天补 reviewer | GitHub 计划支持 | Environment 至少一名 reviewer | 届时需要管理员配置/确认 |
-| P1 | 海外正式环境受控 Beta | 代表平台 PASS | 发布前只需复核准确候选 SHA | 公司 Beta Check | 登录、刷新、退出重登、任务、SSE、附件和产物均通过 | 发布时需要最终确认 |
+| P1 | 海外正式环境公开 Beta | **`v0.3.0-beta.2` 已发布，代表平台 PASS** | 已完成 | 公司 Publish Beta 和一次性生产 ticket | Release、单快照安装分支、生产附件、SSE 图片生成和 preview/download 均通过 | 无 |
 | P1 | 回滚与停止发布演练 | **已完成**；真实恢复 170 秒、临时分支已清理、正式对象未变化；MR #356 已合并，海外非生产命中/恢复已完成 | 已完成 | VivagoAgent MR 合并和海外非生产部署窗口 | 30 分钟内恢复安装通道；坏版本命中 HTTP 426；清空配置后恢复 | 无 |
 | P2 | macOS 公证、Windows 签名 | 未开始 | 2–5 天 | Apple Developer ID、Windows 代码签名证书 | 安装和首次运行不触发无法解释的 Gatekeeper/SmartScreen 风险 | 需要公司提供证书和签名主体 |
 
-下一轮按以下顺序执行：
-
-1. 验证个人 GitHub `main` 的 dev CI，确认 CLI 修复生成开发产物。
-2. 将同一提交同步到公司 GitHub `main`，运行公司 Beta Check。
-3. 发布窗口由执行人核对海外生产 Loki stream selector 和监控模板字段。
-4. 完成法务和仓库公开审批后，再单独批准 `v0.3.0-beta.1` 发布。
+下一轮不需要为了证明快照机制再发布一个空版本。后续有用户可见改动或修复时，继续按同一流程发布
+更高 `beta.N`，并在发布后核对 Tag/SHA、Release、两份 attestation、`marketplace` 单提交与体积、
+生产错误率、登录和任务指标。若公司 GitHub 计划支持 Environment reviewer，再补至少一名发布审批人。
 
 ## 哪些结论可以对外说
 
@@ -445,7 +463,7 @@ L2 不调用 Codex 或 Claude 模型。它证明的是官方插件命令能安�
 | macOS ARM64 已完成生产登录、刷新、退出重登、Codex 任务、SSE 恢复、附件和产物验证 | 生产代表验证等于六平台都完成真人登录和模型调用 |
 | dev.8 在 macOS ARM64 的刷新、退出、重登和 Codex 自然语言调用通过 | `source=cli` 已由本轮直接查询测试数据库证明 |
 | CLI 创建的验证项目和对话可在海外测试 Web 页面打开 | 所有 CLI 项目和所有平台的 Web 可见性均已逐一验证 |
-| dev.8 Release、公司 Beta Check、生产附件冒烟和报告可追溯 | 公司 GitHub Beta 已经公开发布 |
+| dev.8 Release、公司 Beta Check、两次公开 Beta、生产附件冒烟和报告可追溯 | 公开 Beta 已经达到 GA 所需的签名、公证和长期 SLA |
 
 当前准确说法是：
 
@@ -453,9 +471,10 @@ L2 不调用 Codex 或 Claude 模型。它证明的是官方插件命令能安�
 > 代表平台已完成海外生产登录、Codex 任务、SSE 恢复、附件和产物验证。第 3 步的 GitHub 回滚
 > 演练已用 170 秒完成安全版本普通快进恢复，临时分支已清理，正式发布对象未变化；VivagoAgent
 > 的 CLI 精确版本 denylist 已合并并完成海外非生产命中/解除演练。个人 dev CI 和公司 Beta
-> Check 均已通过，公司源码仓库已公开；
-> `v0.3.0-beta.1` 已发布为 GitHub Prerelease，`marketplace` 已更新；当前没有执行服务端部署，
-> 进入生产观察期。
+> Check 均已通过，公司源码仓库已公开。`v0.3.0-beta.2` 已发布为 GitHub Prerelease，六平台为
+> 6/6、双宿主为 12/12；`marketplace` 在第二次生产发布后仍为一个无父提交、42,418,915 字节，
+> 没有累计上一版二进制历史。生产 Codex 代表平台的附件识别、SSE 图片生成和产物 preview/download
+> 已通过，当前进入生产观察期。
 
 ## 相关提交
 
