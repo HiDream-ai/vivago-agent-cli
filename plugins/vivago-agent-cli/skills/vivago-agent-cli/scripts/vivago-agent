@@ -1,0 +1,34 @@
+#!/bin/sh
+set -eu
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+OS_NAME=$(uname -s)
+ARCH_NAME=$(uname -m)
+case "$OS_NAME" in
+  Darwin) TARGET_OS=darwin ;;
+  Linux) TARGET_OS=linux ;;
+  MINGW*|MSYS*|CYGWIN*) TARGET_OS=windows ;;
+  *)
+    printf '%s
+' '{"ok":false,"data":null,"error":{"code":"UNSUPPORTED_PLATFORM","message":"No bundled VivagoAgent binary matches this operating system."}}'
+    exit 40
+    ;;
+esac
+case "$ARCH_NAME" in
+  arm64|aarch64) TARGET_ARCH=arm64 ;;
+  x86_64|amd64) TARGET_ARCH=amd64 ;;
+  *)
+    printf '%s
+' '{"ok":false,"data":null,"error":{"code":"UNSUPPORTED_PLATFORM","message":"No bundled VivagoAgent binary matches this CPU architecture."}}'
+    exit 40
+    ;;
+esac
+BINARY="$SCRIPT_DIR/../../../bin/$TARGET_OS-$TARGET_ARCH/vivago-agent"
+if [ "$TARGET_OS" = windows ]; then
+  BINARY="$BINARY.exe"
+fi
+if [ ! -x "$BINARY" ]; then
+  printf '%s
+' '{"ok":false,"data":null,"error":{"code":"PLUGIN_RUNTIME_MISSING","message":"The bundled VivagoAgent binary is missing; reinstall the plugin."}}'
+  exit 40
+fi
+exec "$BINARY" "$@"
