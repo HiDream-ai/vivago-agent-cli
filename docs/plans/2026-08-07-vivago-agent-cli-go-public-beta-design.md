@@ -1,5 +1,10 @@
 # VivagoAgent Go CLI 与六平台插件公开 Beta 设计
 
+> 2026-09-09 补充：国内 WorkBuddy 接入是独立的 Node.js Skill 和发布单元，不新增 Go CLI
+> 编译 profile。完整边界和国内协议见
+> [`2026-09-09-workbuddy-gouda-agent-skill-design.md`](2026-09-09-workbuddy-gouda-agent-skill-design.md)。
+> Go CLI 和 WorkBuddy Skill 创建 Project 时统一使用 `version=v3`。
+
 正式版上线门槛和后续工作见
 [`2026-08-07-vivago-agent-cli-public-ga-gap-analysis.md`](2026-08-07-vivago-agent-cli-public-ga-gap-analysis.md)。
 公司 GitHub、个人 Dev 通道、生产 Beta CI、公开仓库门禁和回滚设计见

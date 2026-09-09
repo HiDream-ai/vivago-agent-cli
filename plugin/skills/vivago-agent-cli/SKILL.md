@@ -78,7 +78,7 @@ offer to resume them before submitting anything new (see `references/recovery-ru
 
 ## Start a task
 
-If the user did not provide a Vivago project ID, create a v2 project with a short, non-sensitive name:
+If the user did not provide a Vivago project ID, create a v3 project with a short, non-sensitive name:
 
 ```bash
 <this-skill-dir>/scripts/vivago-agent --json project create --name "<short name>"

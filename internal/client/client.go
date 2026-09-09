@@ -120,7 +120,7 @@ func New(config Config) (*Client, error) {
 func (client *Client) CreateProject(ctx context.Context, name string) (map[string]any, error) {
 	return client.postJSON(ctx, "/api/agent/v1/project/create", map[string]any{
 		"name":    name,
-		"version": "v2",
+		"version": "v3",
 	})
 }
 

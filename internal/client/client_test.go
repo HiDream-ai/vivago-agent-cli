@@ -150,7 +150,7 @@ func TestCreateProjectUsesWebV1Contract(t *testing.T) {
 		if err := json.NewDecoder(request.Body).Decode(&body); err != nil {
 			t.Fatalf("decode request body: %v", err)
 		}
-		if body["name"] != "Codex task" || body["version"] != "v2" {
+		if body["name"] != "Codex task" || body["version"] != "v3" {
 			t.Errorf("body = %#v", body)
 		}
 
