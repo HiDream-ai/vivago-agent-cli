@@ -7,6 +7,13 @@ const PROFILE = Object.freeze({
   apiBaseURL: "https://goudaai.com",
   webBaseURL: "https://goudaai.com",
   loginURL: "https://goudaai.com/login",
+  paymentURLs: Object.freeze({
+    credits:
+      "https://market.volcengine.com/goods/detail?goodsId=wysf9000287&detailFrom=2",
+    membership:
+      "https://market.volcengine.com/goods/detail?goodsId=wysf9000286&detailFrom=2",
+  }),
+  paymentReturnURL: "https://goudaai.com/home",
   refreshPath: "/prod-api/user/apikey2token",
   ossCredentialPath: "/prod-api/user/oss_key",
   projectVersion: "v3",

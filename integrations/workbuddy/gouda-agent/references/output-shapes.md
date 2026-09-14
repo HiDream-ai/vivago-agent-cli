@@ -29,6 +29,28 @@ stderr 或自由文本。
 
 此时进程退出 50，使用同一 Turn 和 `last_event_id` 恢复。
 
+支付门槛：
+
+```json
+{"type":"payment_required","reason":"membership","code":2020,"url":"https://market.volcengine.com/goods/detail?goodsId=wysf9000286&detailFrom=2","return_url":"https://goudaai.com/home","opened":false}
+```
+
+AgentOS 积分不足会先返回如下 `RUN_ERROR` 事件：
+
+```json
+{"type":"RUN_ERROR","code":"insufficient_credits","message":"Insufficient credits. Your project has been suspended."}
+```
+
+Skill 随后输出 `payment_required`，并保留字符串错误码：
+
+```json
+{"type":"payment_required","reason":"credits","code":"insufficient_credits","url":"https://market.volcengine.com/goods/detail?goodsId=wysf9000287&detailFrom=2","return_url":"https://goudaai.com/home","opened":true}
+```
+
+`reason=credits` 表示需要购买积分，`reason=membership` 表示需要订阅会员。
+这条记录对应的 Turn 已失败，`opened=false` 时由用户手动打开 `url`；支付并在够搭首页确认后，
+在原 Conversation 中创建新的 Turn，不要恢复或自动重试原 Turn。
+
 ## 普通 JSON envelope
 
 成功：

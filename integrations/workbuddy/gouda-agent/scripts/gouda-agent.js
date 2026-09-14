@@ -2,12 +2,13 @@
 "use strict";
 
 const { ArtifactDownloader, resolveArtifactURL } = require("./artifact");
-const { AuthProvider, login } = require("./auth");
+const { AuthProvider, defaultOpenURL, login } = require("./auth");
 const { GoudaClient } = require("./client");
 const { PROFILE } = require("./config");
 const { CredentialStore, defaultDataDirectory } = require("./credentials");
 const { uploadAttachment, validateAttachments } = require("./oss");
 const { writeFailure, writeRecord, writeSuccess } = require("./output");
+const { paymentRequirementFromEvent } = require("./payment");
 const { decodeSSE, terminalType } = require("./sse");
 const { StateStore } = require("./state");
 
@@ -113,7 +114,13 @@ function exitCodeFor(error) {
 }
 
 async function emitStream(stream, context) {
-  const { stdout, stateStore, projectID = "", previous = {} } = context;
+  const {
+    stdout,
+    stateStore,
+    projectID = "",
+    previous = {},
+    openURL = defaultOpenURL,
+  } = context;
   if (!stream.turnID) {
     throw Object.assign(new Error("stream response is missing turn ID"), {
       code: "PROTOCOL_ERROR",
@@ -136,6 +143,7 @@ async function emitStream(stream, context) {
 
   let lastEventID = previous.last_event_id || "";
   let terminal = "";
+  let paymentRequirement = null;
   try {
     for await (const event of decodeSSE(stream.body)) {
       writeRecord(stdout, { type: "event", ...event });
@@ -143,11 +151,29 @@ async function emitStream(stream, context) {
         lastEventID = event.event_id;
       }
       terminal = terminalType(event) || terminal;
+      if (!paymentRequirement) {
+        paymentRequirement = paymentRequirementFromEvent(event);
+        if (paymentRequirement) {
+          let opened = false;
+          try {
+            opened = (await openURL(paymentRequirement.url)) !== false;
+          } catch {
+            opened = false;
+          }
+          writeRecord(stdout, {
+            type: "payment_required",
+            ...paymentRequirement,
+            opened,
+          });
+        }
+      }
       await stateStore.upsert({
         ...baseState,
         ...(lastEventID ? { last_event_id: lastEventID } : {}),
         status:
-          terminal === "RUN_FINISHED"
+          paymentRequirement
+            ? "failed"
+            : terminal === "RUN_FINISHED"
             ? "finished"
             : terminal === "RUN_ERROR"
               ? "failed"
@@ -156,6 +182,9 @@ async function emitStream(stream, context) {
     }
   } catch {
     terminal = "";
+  }
+  if (paymentRequirement) {
+    return EXIT_BUSINESS;
   }
   if (terminal === "RUN_FINISHED") {
     return 0;
@@ -394,7 +423,12 @@ async function run(rawArgs, dependencies = {}) {
         imageSearchEnabled: Boolean(flags["image-search"]),
         attachments: uploaded,
       });
-      return emitStream(stream, { stdout, stateStore, projectID });
+      return emitStream(stream, {
+        stdout,
+        stateStore,
+        projectID,
+        openURL: dependencies.openURL,
+      });
     }
 
     if (command === "resume") {
@@ -409,7 +443,12 @@ async function run(rawArgs, dependencies = {}) {
         }
       }
       const stream = await client.resume(turnID, String(flags["last-event-id"] || ""));
-      return emitStream(stream, { stdout, stateStore, previous });
+      return emitStream(stream, {
+        stdout,
+        stateStore,
+        previous,
+        openURL: dependencies.openURL,
+      });
     }
 
     throw Object.assign(new Error("unsupported command"), { code: "INVALID_ARGUMENT" });

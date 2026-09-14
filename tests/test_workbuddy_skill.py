@@ -61,6 +61,12 @@ class WorkBuddySkillTests(unittest.TestCase):
         self.assertIn("node scripts/gouda-agent.js doctor", skill_text)
         self.assertNotIn("内部的 MCP 工具和 Skill", skill_text)
 
+    def test_skill_and_runtime_versions_are_1_0_1_for_payment_redirect_release(self) -> None:
+        skill_text = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        config_text = (SKILL_ROOT / "scripts" / "config.js").read_text(encoding="utf-8")
+        self.assertIn("version: 1.0.1", skill_text)
+        self.assertIn('skillVersion: "1.0.1"', config_text)
+
     def test_skill_passes_repository_validator(self) -> None:
         result = subprocess.run(
             [sys.executable, str(VALIDATOR), str(SKILL_ROOT)],

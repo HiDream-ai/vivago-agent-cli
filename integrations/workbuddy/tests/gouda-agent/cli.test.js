@@ -124,6 +124,158 @@ test("ask emits JSONL, stores only identifiers, and records terminal completion"
   assert.equal(stderr.value(), "");
 });
 
+test("ask opens the credits purchase page when the stream reports insufficient credits", async () => {
+  const stdout = sink();
+  const opened = [];
+  const writes = [];
+  const exitCode = await run(
+    ["ask", "--project-id", "project-1", "--prompt", "Create one image"],
+    {
+      stdout,
+      stderr: sink(),
+      openURL: async (url) => {
+        opened.push(url);
+        return true;
+      },
+      client: {
+        async ask() {
+          return {
+            conversationID: "conversation-1",
+            turnID: "turn-1",
+            body: eventBody([
+              { id: "event-1", data: { type: "RUN_STARTED" } },
+              {
+                id: "event-2",
+                data: {
+                  code: 2007,
+                  message: "您的积分不足，请前往购买页面进行充值。",
+                },
+              },
+              { id: "event-3", data: { type: "RUN_ERROR" } },
+            ]),
+          };
+        },
+      },
+      stateStore: {
+        async upsert(value) {
+          writes.push(value);
+        },
+      },
+    },
+  );
+  assert.equal(exitCode, 30);
+  const records = stdout.value().trim().split("\n").map(JSON.parse);
+  assert.deepEqual(records.find((record) => record.type === "payment_required"), {
+    type: "payment_required",
+    reason: "credits",
+    code: 2007,
+    url: "https://market.volcengine.com/goods/detail?goodsId=wysf9000287&detailFrom=2",
+    return_url: "https://goudaai.com/home",
+    opened: true,
+  });
+  assert.deepEqual(opened, [
+    "https://market.volcengine.com/goods/detail?goodsId=wysf9000287&detailFrom=2",
+  ]);
+  assert.equal(writes.at(-1).status, "failed");
+});
+
+test("ask opens the credits purchase page for the AgentOS insufficient_credits error", async () => {
+  const stdout = sink();
+  const opened = [];
+  const exitCode = await run(
+    ["ask", "--project-id", "project-1", "--prompt", "Create one image"],
+    {
+      stdout,
+      stderr: sink(),
+      openURL: async (url) => {
+        opened.push(url);
+        return true;
+      },
+      client: {
+        async ask() {
+          return {
+            conversationID: "conversation-1",
+            turnID: "turn-1",
+            body: eventBody([
+              { id: "event-1", data: { type: "RUN_STARTED" } },
+              {
+                id: "event-2",
+                data: {
+                  type: "RUN_ERROR",
+                  code: "insufficient_credits",
+                  message: "Insufficient credits. Your project has been suspended.",
+                },
+              },
+            ]),
+          };
+        },
+      },
+      stateStore: { async upsert() {} },
+    },
+  );
+  assert.equal(exitCode, 30);
+  const records = stdout.value().trim().split("\n").map(JSON.parse);
+  assert.deepEqual(records.find((record) => record.type === "payment_required"), {
+    type: "payment_required",
+    reason: "credits",
+    code: "insufficient_credits",
+    url: "https://market.volcengine.com/goods/detail?goodsId=wysf9000287&detailFrom=2",
+    return_url: "https://goudaai.com/home",
+    opened: true,
+  });
+  assert.deepEqual(opened, [
+    "https://market.volcengine.com/goods/detail?goodsId=wysf9000287&detailFrom=2",
+  ]);
+});
+
+test("ask opens the membership purchase page when the stream reports insufficient user level", async () => {
+  const stdout = sink();
+  const opened = [];
+  const exitCode = await run(
+    ["ask", "--project-id", "project-1", "--prompt", "Create a premium video"],
+    {
+      stdout,
+      stderr: sink(),
+      openURL: async (url) => {
+        opened.push(url);
+        return false;
+      },
+      client: {
+        async ask() {
+          return {
+            conversationID: "conversation-1",
+            turnID: "turn-1",
+            body: eventBody([
+              {
+                id: "event-1",
+                data: {
+                  code: 2020,
+                  message: "此功能仅对会员开放，请订阅会员后继续。",
+                },
+              },
+              { id: "event-2", data: { type: "RUN_ERROR" } },
+            ]),
+          };
+        },
+      },
+      stateStore: { async upsert() {} },
+    },
+  );
+  assert.equal(exitCode, 30);
+  const records = stdout.value().trim().split("\n").map(JSON.parse);
+  assert.deepEqual(records.find((record) => record.type === "payment_required"), {
+    type: "payment_required",
+    reason: "membership",
+    code: 2020,
+    url: "https://market.volcengine.com/goods/detail?goodsId=wysf9000286&detailFrom=2",
+    return_url: "https://goudaai.com/home",
+    opened: false,
+  });
+  assert.deepEqual(opened, [
+    "https://market.volcengine.com/goods/detail?goodsId=wysf9000286&detailFrom=2",
+  ]);
+});
+
 test("ask validates required arguments before inspecting or uploading attachments", async () => {
   const stdout = sink();
   let validationCalls = 0;

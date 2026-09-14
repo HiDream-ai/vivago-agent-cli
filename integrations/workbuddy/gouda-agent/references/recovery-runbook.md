@@ -72,3 +72,15 @@ node scripts/gouda-agent.js cancel \
 ```
 
 接口返回只表示取消请求被受理。看到终态前不得把状态报告为已经停止。
+
+## 支付门槛
+
+如果 `ask` 或 `resume` 输出 `payment_required`，说明服务端以积分不足（`2007` 或
+`insufficient_credits`）或会员等级不足
+（`2020`）结束了当前 Turn。这不是 SSE 中断：
+
+1. 先把 `url` 告知用户；`opened=false` 时由用户手动打开商品页。
+2. 支付完成后让用户回到 `return_url`（够搭首页），按网页提示确认支付。
+3. 用户明确确认支付完成后，在原 Conversation 中创建新的 Turn。
+
+不要对该 Turn 使用 `resume`，不要自动重复提交原 prompt，也不要在看到支付页面后声称付款成功。
