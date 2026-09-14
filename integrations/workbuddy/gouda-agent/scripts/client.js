@@ -22,7 +22,7 @@ function requestHeaders(ticket) {
     Authorization: `Bearer ${ticket}`,
     "Content-Type": "application/json",
     Accept: "application/json",
-    "X-Source": "cli",
+    "X-Source": "workbuddy",
     "X-Client-Platform": "web",
     "X-Client-Version": PROFILE.skillVersion,
     "User-Agent": `gouda-agent-workbuddy/${PROFILE.skillVersion} (${os.platform()}; ${os.arch()})`,

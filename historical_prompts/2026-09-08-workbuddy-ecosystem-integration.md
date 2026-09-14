@@ -64,6 +64,13 @@ WorkBuddy package must use the domestic path rather than copying the overseas UR
 - Use a stronger marketplace-facing Chinese capability introduction that presents Gouda Agent as an
   end-to-end AI creative production engine, while keeping the separate routing description factual
   and narrowly scoped for reliable Skill selection.
+- The marketplace-visible `SKILL.md` should read as a polished product overview rather than an
+  internal implementation note. Keep the executable command boundary, domestic-only behavior,
+  safety rules, and progressive reference links intact, and remove broken or non-public asset
+  references.
+- WorkBuddy metadata must keep a kebab-case machine `name` matching the package directory, while
+  `display_name`, `display_name_en`, `description_zh`, `description_en`, and `category` provide the
+  marketplace-facing labels and descriptions.
 - Treat media-key URL expansion as a regional profile responsibility. The domestic package uses the
   current domestic image-CDN and media-CDN hosts; the later overseas package will use its separate
   storage and media hosts.
@@ -78,6 +85,10 @@ WorkBuddy package must use the domestic path rather than copying the overseas UR
   are not first-release requirements.
 - Publication approval must not be claimed in advance; the assessment should identify documented
   compatibility requirements, security gaps, and the evidence needed for a formal review.
+- Attribute every domestic WorkBuddy Skill API call with `X-Source: workbuddy` so its Project,
+  Conversation, and Turn records can be distinguished from existing Go CLI traffic. Keep the Go CLI
+  on `X-Source: cli`; backend acceptance and persistence of the new value are a separate deployment
+  dependency and must be verified end to end.
 
 ## Explicit non-goals
 
@@ -89,6 +100,3 @@ WorkBuddy package must use the domestic path rather than copying the overseas UR
 - Do not treat a packaging prototype or local test as proof of WorkBuddy marketplace approval.
 - Do not include credentials, user data, private service locations, or operational identifiers in this
   record.
-- Do not add backend support for a new persisted `workbuddy` source label in the first release; the
-  existing recognized CLI compatibility label may be used until source attribution is changed as a
-  separate server task.

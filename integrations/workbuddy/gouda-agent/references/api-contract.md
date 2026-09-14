@@ -46,9 +46,10 @@ https://goudaai.com/new-chat?project_id={project-id}&conversation_id={conversati
 
 终态只有 `RUN_FINISHED` 和 `RUN_ERROR`。没有终态就结束的流必须当作可恢复中断，不能当作成功。
 
-请求携带 `X-Client-Platform: web`。第一版暂用后端已经识别的 `X-Source: cli` 兼容值；
-`User-Agent` 中的 `gouda-agent-workbuddy/<version>` 用于区分 WorkBuddy 调用。增加独立的
-`workbuddy` 持久化来源需要服务端先扩展白名单，不在本 Skill 内伪造。
+请求携带 `X-Client-Platform: web` 和 `X-Source: workbuddy`，让后端能够独立归因
+WorkBuddy Skill 创建的 Project、Conversation 和 Turn。`User-Agent` 中的
+`gouda-agent-workbuddy/<version>` 用于识别具体 Skill 版本。现有 Go CLI 继续使用
+`X-Source: cli`，两者互不切换。
 
 ## 上传与资源协议
 

@@ -3,7 +3,7 @@
 const PROFILE = Object.freeze({
   name: "domestic-prod",
   skillName: "gouda-agent",
-  skillVersion: "1.0.0",
+  skillVersion: "1.0.1",
   apiBaseURL: "https://goudaai.com",
   webBaseURL: "https://goudaai.com",
   loginURL: "https://goudaai.com/login",

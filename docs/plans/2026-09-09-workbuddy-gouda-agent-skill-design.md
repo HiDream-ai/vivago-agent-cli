@@ -91,10 +91,10 @@ The Skill has no runtime environment selector and no overseas fallback.
 Project creation always sends `version: "v3"`. The existing Go CLI is changed to the same project
 version in this work so the two clients do not create different project types.
 
-`X-Source: cli` remains the compatibility value for this first release because the current server
-only recognizes `cli`; arbitrary values are discarded. `User-Agent` and the Skill version identify
-the WorkBuddy client operationally. Introducing a persisted `workbuddy` source is a separate server
-change and is not required for marketplace v1.
+Every WorkBuddy Skill API request sends `X-Source: workbuddy` so the server can attribute its
+Project, Conversation, and Turn records independently from the Go CLI. The existing Go CLI keeps
+`X-Source: cli`; neither client exposes a runtime source switch. Server-side acceptance and
+persistence of the `workbuddy` value remain a deployment dependency outside this repository.
 
 ## 4. Runtime commands
 

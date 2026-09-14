@@ -45,6 +45,22 @@ class WorkBuddySkillTests(unittest.TestCase):
                     violations.append(f"{item.relative_to(SKILL_ROOT)}: {marker}")
         self.assertEqual(violations, [])
 
+    def test_skill_markdown_is_public_facing_and_has_no_broken_assets(self) -> None:
+        skill_text = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        self.assertNotIn("![img.png](img.png)", skill_text)
+        for heading in (
+            "## 能力介绍",
+            "## 适合处理的任务",
+            "## 使用方法",
+            "## 任务执行与交付",
+            "## 继续修改与恢复",
+            "## 安全与隐私",
+            "## Agent 执行规范",
+        ):
+            self.assertIn(heading, skill_text)
+        self.assertIn("node scripts/gouda-agent.js doctor", skill_text)
+        self.assertNotIn("内部的 MCP 工具和 Skill", skill_text)
+
     def test_skill_passes_repository_validator(self) -> None:
         result = subprocess.run(
             [sys.executable, str(VALIDATOR), str(SKILL_ROOT)],

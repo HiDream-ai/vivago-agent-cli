@@ -12,7 +12,7 @@ function jsonResponse(payload, init = {}) {
   });
 }
 
-test("project create uses domestic v1 endpoint and project version v3", async () => {
+test("project create uses domestic v1 endpoint, project version v3, and WorkBuddy source", async () => {
   let captured;
   const client = new GoudaClient({
     tokenProvider: async () => "unit-ticket",
@@ -30,7 +30,7 @@ test("project create uses domestic v1 endpoint and project version v3", async ()
     version: "v3",
   });
   assert.equal(captured.options.headers.Authorization, "Bearer unit-ticket");
-  assert.equal(captured.options.headers["X-Source"], "cli");
+  assert.equal(captured.options.headers["X-Source"], "workbuddy");
   assert.equal(captured.options.headers["X-Client-Platform"], "web");
   assert.match(captured.options.headers["User-Agent"], /^gouda-agent-workbuddy\//);
   assert.equal(result.data.project_id, "project-1");
@@ -120,6 +120,7 @@ test("ask starts the domestic SSE conversation contract", async () => {
   const body = JSON.parse(captured.options.body);
   assert.equal(captured.url, "https://goudaai.com/api/agent/v2/conversation/chat");
   assert.equal(captured.options.headers.Accept, "text/event-stream");
+  assert.equal(captured.options.headers["X-Source"], "workbuddy");
   assert.equal(body.projectId, "project-1");
   assert.equal(body.threadId, "");
   assert.equal(body.imageSearchEnabled, true);

@@ -13,3 +13,6 @@
   are flattened under `scripts/` to satisfy WorkBuddy's two-level directory limit.
 - Create new projects as `version=v3` from both the existing Go CLI and the WorkBuddy Skill.
 - Generate domestic WorkBuddy Project links with Gouda's top-level `/new-chat` route.
+- Rewrite the marketplace-visible `SKILL.md` as a concise, public-facing product overview with
+  clear capabilities, usage guidance, delivery expectations, and safety notes; remove the broken
+  local image reference while retaining the executable command boundary and progressive references.
